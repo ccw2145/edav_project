@@ -1,0 +1,34 @@
+---
+title: "edav_project"
+author: "Cindy Wu"
+date: "4/2/2018"
+output: html_document
+---
+
+```{r packages, include=FALSE}
+library(dplyr)
+```
+
+```{r load data}
+#data <- read.csv('data/DOHMH_New_York_City_Restaurant_Inspection_Results.csv', header = T)
+load('data/data.RData')
+names(data)
+```
+
+```{r clean data}
+# keep usefulc colns
+keep_cols <- c('BORO', 'ZIPCODE','CUISINE.DESCRIPTION','INSPECTION.DATE','VIOLATION.CODE','VIOLATION.DESCRIPTION','SCORE', 'GRADE','INSPECTION.TYPE')
+df <- data %>% select(keep_cols)
+
+# new restaurants
+nrow(df[df$INSPECTION.DATE == '1/1/00',])
+
+# remove new restaurants and restaurants with no scores
+df <- filter(df,!is.na(SCORE))
+nrow(df)
+```
+```{r}
+
+```
+
+

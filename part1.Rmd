@@ -1,0 +1,67 @@
+---
+title: "Preprocessing"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+
+```{r}
+setwd('/Users/lisakim/Desktop/EDAV Final/')
+library(tidyverse)
+data <- read.csv("combined_data.csv")
+head(data)
+```
+
+
+Combining the cuisine descriptions
+
+```{r}
+levels(data$cuisine) <- sub("Pizza/Italian", "Italian", levels(data$cuisine))
+levels(data$cuisine) <- sub("Pizza", "Italian", levels(data$cuisine))
+levels(data$cuisine) <- sub("CafÃ©/Coffee/Tea", "Dessert", levels(data$cuisine))
+levels(data$cuisine) <- sub("Fruits/Vegetables", "Salads",levels(data$cuisine))
+levels(data$cuisine) <- sub("Hotdogs/Pretzels", "Hotdogs", levels(data$cuisine))
+levels(data$cuisine) <- sub("Ice Cream, Gelato, Yogurt, Ices", "Dessert", levels(data$cuisine))
+levels(data$cuisine) <- sub("Juice, Smoothies, Fruit Salads", "Salads", levels(data$cuisine))
+levels(data$cuisine) <- sub("Latin (Cuban, Dominican, Puerto Rican, South & Central American)",
+                            "Latin", levels(data$cuisine))
+levels(data$cuisine) <- sub("Sandwiches/Salads/Mixed Buffet", "Sandwiches", levels(data$cuisine))
+levels(data$cuisine) <- sub("Bottled beverages, including water, sodas, juices, etc.", "Dessert", levels(data$cuisine))
+levels(data$cuisine) <- sub("Not Listed/Not Applicable", "Other", levels(data$cuisine))
+levels(data$cuisine) <- sub("Latin (Cuban, Dominican, Puerto Rican, South & Central American)", "Latin", levels(data$cuisine))
+levels(data$cuisine) <- sub("Soups & Sandwiches", "Sandwiches", levels(data$cuisine))
+
+```
+
+```{r}
+ggplot(data, aes(score)) + geom_histogram(binwidth = 5, boundary = 0, color = "black", fill = "blue") + labs(title = "Distribution of scores")
+```
+
+```{r}
+ggplot(data, aes(score)) + geom_histogram(binwidth = 5, boundary = 0, color = "black", fill = "blue") + labs(title = "Distribution of scores") +
+  facet_grid(boro~., scale = "free")
+```
+```{r}
+ggplot(data) + geom_histogram(aes(score), binwidth = 5) + labs(title = "Distribution of scores")
+```
+
+
+```{r}
+newdf <- data %>% select(violation.code, grade) %>% group_by(violation.code, grade) %>% summarize(count = n())
+View(newdf)
+newdf <- newdf %>% filter(violation.code != "")
+```
+
+```{r}
+library(lattice)
+
+a = newdf %>% filter(grade == "A")
+ggplot(a) + geom_col(aes(x=violation.code, y= count))
+
+```

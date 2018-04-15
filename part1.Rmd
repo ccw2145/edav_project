@@ -10,58 +10,156 @@ knitr::opts_chunk$set(echo = TRUE)
 ## R Markdown
 
 
-
 ```{r}
 setwd('/Users/lisakim/Desktop/EDAV Final/')
+data <- read.csv('Restaurants.csv', header = T)
+names(data)
+```
+
+```{r}
 library(tidyverse)
-data <- read.csv("combined_data.csv")
-head(data)
+keep_cols <- c('DBA', 'BORO', 'ZIPCODE','CUISINE.DESCRIPTION','INSPECTION.DATE','VIOLATION.CODE','SCORE', 'GRADE','INSPECTION.TYPE')
+df <- data%>% select(keep_cols)
+
+df <- filter(df,!is.na(SCORE))
+nrow(df)
+
+colnames(df) <- c("name", "boro", "zipcode", "cuisine", "inspection_data", 
+                  "violation_code", "score", "grade",
+                  "inspection_type")
+
+
+
+description <- c('VIOLATION.CODE', 'VIOLATION.DESCRIPTION')
+violation <- data %>% select(description)
+violation <- na.omit(violation)
+violation <- unique(violation)
+
+```
+
+```{r}
+convert_to_grade <- function(x){
+  if (x < 14){
+    return("A")
+  }
+  else if(x > 28){
+    return("C")
+  }
+  else {
+    return("B")
+  }
+}
+
+grade <- sapply(df$score, convert_to_grade)
+df$grade <- grade
 ```
 
 
 Combining the cuisine descriptions
 
 ```{r}
-levels(data$cuisine) <- sub("Pizza/Italian", "Italian", levels(data$cuisine))
-levels(data$cuisine) <- sub("Pizza", "Italian", levels(data$cuisine))
-levels(data$cuisine) <- sub("CafÃ©/Coffee/Tea", "Dessert", levels(data$cuisine))
-levels(data$cuisine) <- sub("Fruits/Vegetables", "Salads",levels(data$cuisine))
-levels(data$cuisine) <- sub("Hotdogs/Pretzels", "Hotdogs", levels(data$cuisine))
-levels(data$cuisine) <- sub("Ice Cream, Gelato, Yogurt, Ices", "Dessert", levels(data$cuisine))
-levels(data$cuisine) <- sub("Juice, Smoothies, Fruit Salads", "Salads", levels(data$cuisine))
-levels(data$cuisine) <- sub("Latin (Cuban, Dominican, Puerto Rican, South & Central American)",
-                            "Latin", levels(data$cuisine))
-levels(data$cuisine) <- sub("Sandwiches/Salads/Mixed Buffet", "Sandwiches", levels(data$cuisine))
-levels(data$cuisine) <- sub("Bottled beverages, including water, sodas, juices, etc.", "Dessert", levels(data$cuisine))
-levels(data$cuisine) <- sub("Not Listed/Not Applicable", "Other", levels(data$cuisine))
-levels(data$cuisine) <- sub("Latin (Cuban, Dominican, Puerto Rican, South & Central American)", "Latin", levels(data$cuisine))
-levels(data$cuisine) <- sub("Soups & Sandwiches", "Sandwiches", levels(data$cuisine))
+levels(df$cuisine) <- sub("Pizza/Italian", "Italian", levels(df$cuisine))
+levels(df$cuisine) <- sub("Pizza", "Italian", levels(df$cuisine))
+levels(df$cuisine) <- sub("CafÃ©/Coffee/Tea", "Dessert", levels(df$cuisine))
+levels(df$cuisine) <- sub("Fruits/Vegetables", "Salads",levels(df$cuisine))
+levels(df$cuisine) <- sub("Hotdogs/Pretzels", "Hotdogs", levels(df$cuisine))
+levels(df$cuisine) <- sub("Ice Cream, Gelato, Yogurt, Ices", "Dessert", levels(df$cuisine))
+levels(df$cuisine) <- sub("Juice, Smoothies, Fruit Salads", "Salads", levels(df$cuisine))
+levels(df$cuisine) <- sub("Latin (Cuban, Dominican, Puerto Rican, South & Central American)",
+                            "Latin", levels(df$cuisine))
+levels(df$cuisine) <- sub("Sandwiches/Salads/Mixed Buffet", "Sandwiches", levels(df$cuisine))
+levels(df$cuisine) <- sub("Bottled beverages, including water, sodas, juices, etc.", "Dessert", levels(df$cuisine))
+levels(df$cuisine) <- sub("Not Listed/Not Applicable", "Other", levels(df$cuisine))
+levels(df$cuisine) <- sub("Latin (Cuban, Dominican, Puerto Rican, South & Central American)", "Latin", levels(df$cuisine))
+levels(df$cuisine) <- sub("Soups & Sandwiches", "Sandwiches", levels(df$cuisine))
 
 ```
 
 ```{r}
-ggplot(data, aes(score)) + geom_histogram(binwidth = 5, boundary = 0, color = "black", fill = "blue") + labs(title = "Distribution of scores")
+ggplot(df, aes(score)) + geom_histogram(binwidth = 5, boundary = 0, color = "black", fill = "blue") + labs(title = "Distribution of scores")
 ```
 
 ```{r}
-ggplot(data, aes(score)) + geom_histogram(binwidth = 5, boundary = 0, color = "black", fill = "blue") + labs(title = "Distribution of scores") +
+ggplot(df, aes(score)) + geom_histogram(binwidth = 5, boundary = 0, color = "black", fill = "blue") + labs(title = "Distribution of scores") +
   facet_grid(boro~., scale = "free")
 ```
+
+
 ```{r}
-ggplot(data) + geom_histogram(aes(score), binwidth = 5) + labs(title = "Distribution of scores")
+df2 <- df %>% select(violation_code, grade) %>% group_by(violation_code, grade) %>% summarize(count = n())
+df2 <- df2 %>% filter(violation_code != "")
+```
+
+```{r}
+df3 = df %>% select(violation_code) %>% group_by(violation_code) %>% summarize(count = n())  %>% arrange(-count)
+ggplot(df3, aes(reorder(violation_code, count), count)) + geom_col() + coord_flip() +
+  labs(title = "Distribution of violation code", x = "violation code")
+
+df3 <- df3[1:10, ]
+ggplot(df3, aes(reorder(violation_code, count), count)) + geom_col() + coord_flip() +
+  labs(title = "Distribution of violation code", x = "violation code")
+```
+
+```{r}
+violation[violation$VIOLATION.CODE %in% df3$violation_code, ]
+```
+
+```{r}
+df4 <- df[df$violation_code %in% df3$violation_code, ]
+
+ggplot(df4, aes(score)) + geom_histogram(binwidth = 5, boundary = 0, color = "black", fill = "blue") + labs(title = "Distribution of scores") +
+  facet_grid(violation_code~boro, scale = "free")
+
+df4$violation_code <- factor(df4$violation_code)
+mosaic(grade~violation_code, df4, labeling = labeling_border(rot_labels = c(90, 0)))
+mosaic(grade~violation_code + boro, df4, labeling = labeling_border(rot_labels = c(0, 0, 0)))
+
+
+```
+```{r}
+df5 <- df %>% select(cuisine) %>% group_by(cuisine) %>% summarize(count = n()) %>% arrange(-count)
+res <- list(df5[1:5, ])
+
+ggplot(df5, aes(reorder(cuisine, count), count)) + geom_col() + coord_flip() +
+  labs(title = "Number of restaurants", x = "Cuisine")
+
+res <- df5[1:5, ]
+ggplot(res, aes(reorder(cuisine, count), count)) + geom_col() + coord_flip() +
+  labs(title = "Number of restaurants", x = "Cuisine")
+
 ```
 
 
 ```{r}
-newdf <- data %>% select(violation.code, grade) %>% group_by(violation.code, grade) %>% summarize(count = n())
-View(newdf)
-newdf <- newdf %>% filter(violation.code != "")
+df6 <- df[df$cuisine %in% res$cuisine, ]
+df6$cuisine <- factor(df6$cuisine)
+ggplot(df6, aes(score)) + geom_histogram(binwidth = 5, boundary = 0, color = "black", fill = "blue") + labs(title = "Distribution of scores") +
+  facet_grid(cuisine~., scale = "free")
+
+df6 <- na.omit(df6)
+df6$cuisine <- factor(df6$cuisine)
+
+library(vcd)
+mosaic(grade~cuisine, df6, labeling = labeling_border(rot_labels = c(90, 0)))
+mosaic(grade~boro + cuisine, df6, labeling = labeling_border(rot_labels = c(0, 0, 0)))
+
 ```
 
 ```{r}
-library(lattice)
+df7 = df6 %>% select(violation_code) %>% group_by(violation_code) %>% summarize(count = n())  %>% arrange(-count)
+ggplot(df7, aes(reorder(violation_code, count), count)) + geom_col() + coord_flip() +
+  labs(title = "Distribution of violation code", x = "violation code")
 
-a = newdf %>% filter(grade == "A")
-ggplot(a) + geom_col(aes(x=violation.code, y= count))
+df8 <- df7[1:10, ]
+ggplot(df8, aes(reorder(violation_code, count), count)) + geom_col() + coord_flip() +
+  labs(title = "Distribution of violation code", x = "violation code")
 
+```
+
+```{r}
+df9 <- df %>% filter(cuisine == "Italian") %>% select(violation_code) %>% group_by(violation_code) %>%
+  summarize(count = n()) %>% arrange(-count) %>% top_n(10)
+
+ggplot(df9, aes(reorder(violation_code, count), count)) + geom_col() + coord_flip() +
+  labs(title = "Distribution of violation code", x = "violation code")
 ```

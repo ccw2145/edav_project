@@ -1,0 +1,312 @@
+---
+title: "project_copy"
+author: "Siwen Tang"
+date: "4/16/2018"
+output: html_document
+---
+
+
+```{r resturant}
+library(dplyr)
+library(ggplot2)
+library(plotly)
+inspecttbl <- read.csv("data/DOHMH_New_York_City_Restaurant_Inspection_Results.csv", header = T, sep=',', na.strings=c("NA","N/A",""), colClasses = "character")
+glimpse(inspecttbl)
+
+#####Date######
+inspecttbl$"INSPECTION.DATE"<-(as.Date(inspecttbl$'INSPECTION.DATE', "%m/%d/%Y"))
+inspecttbl$"GRADE.DATE"<-(as.Date(inspecttbl$'GRADE.DATE', "%m/%d/%Y"))
+inspecttbl$"RECORD.DATE"<-(as.Date(inspecttbl$'RECORD.DATE', "%m/%d/%Y"))
+class(inspecttbl$'RECORD.DATE')
+
+##### DataFrame Conversion #######
+inspecttbl$GRADE <- factor(inspecttbl$GRADE, levels = c("A", "B", "C", "Z", "Not Yet Graded"), ordered = TRUE)
+inspecttbl$`CUISINE.DESCRIPTION` <- factor(inspecttbl$`CUISINE.DESCRIPTION`)
+inspecttbl$`CRITICAL.FLAG` <-   factor(inspecttbl$`CRITICAL.FLAG`, levels = c("Critical", "Not Critical", "Not Applicable"), ordered = T)
+inspecttbl$CAMIS <- as.numeric(inspecttbl$CAMIS)
+inspecttbl$SCORE <- as.numeric(inspecttbl$SCORE)
+
+###### Exploration ######
+# No. of distinct restaurants
+n_distinct(inspecttbl$CAMIS)
+# Data Cleaning -- remove inspection 1900 
+inspecttbl<-filter(inspecttbl, `INSPECTION.DATE` != "1900-01-01")
+range(inspecttbl$`INSPECTION.DATE`)
+
+#### INSPECTION.TYPE Violation related####
+# we focus on instore sanity check of the inspection#
+
+levels(as.factor(inspecttbl$`INSPECTION.TYPE`))
+gradables <- c("Cycle Inspection / Initial Inspection" , "Cycle Inspection / Re-inspection", 
+               "Pre-permit (Operational) / Initial Inspection", "Pre-permit (Operational) / Re-inspection")
+
+inspecttbl1 <- (filter(inspecttbl, `INSPECTION.TYPE` %in% gradables))
+
+View(inspecttbl1)
+
+
+########Get Grade in DataFrame########
+grades <- c("A", "B", "C")
+nrow(filter(inspecttbl1, GRADE %in% grades))
+
+
+
+#######New DataFrame Summary violation per restaurant per date delete!#####
+shrunkenData <- (distinct(select(inspecttbl1, CAMIS, DBA, BORO, BUILDING, STREET, ZIPCODE, `CUISINE.DESCRIPTION`, `INSPECTION.DATE`, ACTION, SCORE, GRADE, `INSPECTION.TYPE`)))
+
+shrunkenData$`INSPECTION.DATE`[1:20]
+
+print(worstOfList <- arrange(filter(shrunkenData, GRADE %in% grades), desc(SCORE))[1:20,c(2,10)])
+arrange(filter(shrunkenData, GRADE %in% grades), desc(SCORE))[1:20,c(2,10)] # select cols and rows # particular rest violate the most
+
+ggplot(worstOfList, aes(reorder(DBA,SCORE), SCORE)) +
+  geom_bar(stat = 'identity', aes(fill = SCORE)) +
+  theme(text = element_text(size=10),
+       axis.text.x = element_text(angle=45, vjust=1, color = "grey")) +
+  geom_hline(yintercept = 14, color = "white") +
+  geom_hline(yintercept = 27, color = "yellow") +
+  labs(title="Worst of the Worst")
+```
+
+```{r Serious Violation and High Score Resterant}
+# Top 10 Resteraurants Ranked by Number of Critical Violation
+# Regardless of type of violation
+
+# group data
+# View(inspecttbl)
+restaurant <- inspecttbl%>%group_by(INSPECTION.DATE, DBA, SCORE, GRADE, CRITICAL.FLAG,BORO, BUILDING, STREET, ZIPCODE)
+# renaming DBA(doing business as usual) to restaurant
+restaurant<- restaurant%>%rename( RESTAURANT = DBA)
+
+# Count voilations according to restaurant and type of violation [~distinct] count the instances regardless of violation type per score, per restaurant, per date
+count<-restaurant%>%summarise(count=n())
+
+
+
+# select only critical violation
+citical_count<-count%>%filter(CRITICAL.FLAG=='Critical')
+
+# Find the worest restaurants by calculating the number of that violate with Grade C under critical situation
+citical_count<-citical_count%>%filter(SCORE>27)%>%group_by(RESTAURANT,STREET)%>%mutate(num_critical_vio=sum(count))
+
+
+# order the data # restaurant the receives violates grade C most
+res_critical_vio_count<-distinct(citical_count%>%select(STREET,RESTAURANT,num_critical_vio)%>%arrange(desc(num_critical_vio)))
+
+ggplot(res_critical_vio_count[1:10,c(2,3)], aes(reorder(RESTAURANT,num_critical_vio), num_critical_vio)) +
+  geom_bar(stat = 'identity',fill="tan2")  +
+  coord_flip()+
+  #xlabel,ylabel 
+  labs(title="10 Worest Resteraurants Ranked by Number of Critical Violation ")
+```
+
+```{r 2plots}
+# restaurant have the highest violation score
+citical_count_score
+# Define bad restaurants as violation  Score > 27 [Grade C] ~ 5 occurance of Grade C
+citical_count_score<-count%>%
+  filter(CRITICAL.FLAG=='Critical',SCORE>27,count>5)%>%
+  arrange(desc(SCORE))
+result<-citical_count_score[1:10,c(2,3,10)]
+
+# save the csv
+# csv<-citical_count_score
+# write.csv(csv[1:15,c(1,4,2,3,10)], file = '/Users/Selina/Desktop/Visualization/EDAV-master/chart.csv',row.names = FALSE)
+
+ggplot(result, aes(reorder(RESTAURANT,SCORE), SCORE)) +
+  geom_bar(stat = 'identity',fill="tan2")  +
+  coord_flip()+
+  #theme(text = element_text(size=10), axis.text.x = element_text(angle=45, vjust=1, color = "grey")) +
+  labs(title="Worest 10 Highest Violation Score Restaurant ")
+
+```
+Chain Restuarant
+```{r CAFE}
+library(tidyverse)
+#### INSPECTION.TYPE Violation related####
+# we focus on instore sanity check of the inspection#
+
+                #extra levels(as.factor(inspecttbl1$CUISINE.DESCRIPTION))
+
+inspecttbl%>%filter(DBA =="STARBUCKS")
+# dis-regarding rows from initial inspections as grades and scores are not counted
+STARBUCKS<-inspecttbl%>%filter(DBA=="STARBUCKS", GRADE!='A', INSPECTION.TYPE!='Cycle Inspection / Initial Inspection', CRITICAL.FLAG=='Critical')
+
+# critical score and inspection type of chain restaurant
+inspecttbl1%>%filter(DBA=="STARBUCKS")%>%group_by(DBA,INSPECTION.DATE,BORO)%>%summarise(mean(SCORE))
+
+# store per year average critical score variation
+
+
+cafe<-inspecttbl1%>%filter(CUISINE.DESCRIPTION=="CafÃ©/Coffee/Tea")%>%mutate(year = format(INSPECTION.DATE, "%Y"))#%>%group_by(DBA,year)%>%summarise(mean(SCORE))
+
+STARBUCKS<-cafe[grep("STARBUCKS",cafe$DBA),]%>%group_by(year,BORO)%>%summarise(MEAN = mean(SCORE))
+STARBUCKS$DBA<-"STARBUCKS"
+STARBUCKS
+DUNKIN<-cafe[grep("DUNKIN*",cafe$DBA),]%>%group_by(year,BORO)%>%summarise(MEAN = mean(SCORE))
+DUNKIN$DBA<-"DUNKIN"
+
+PICCOLO<-cafe[grep("PICCOLO*",cafe$DBA),]%>%group_by(year,BORO)%>%summarise(MEAN = mean(SCORE))
+PICCOLO$DBA<-"PICCOLO"
+
+GREGORY<-cafe[grep("GREGORY'S COFFEE*",cafe$DBA),]%>%group_by(year,BORO)%>%summarise(MEAN = mean(SCORE))
+GREGORY$DBA<-"GREGORY"
+
+score<-rbind(STARBUCKS,DUNKIN,GREGORY,PICCOLO)
+score_boro<-score%>%filter(BORO=="MANHATTAN"|BORO=="QUEENS"|BORO=="BROOKLYN")
+
+
+###########Ranked Plot of Cafe###############
+
+ggplot(score_boro, aes(x = year, y = MEAN, fill = DBA)) +
+  geom_col(position = "dodge") +
+  facet_grid(fct_relevel(score_boro$BORO,"MANHATTAN")~.)+
+  ggtitle("Mean Violation Score") +
+  theme_grey(16)
+```
+
+```{r CAFE}
+library(readr)
+library(vcd)
+library(grid)
+# CAFE common violation type
+
+STARBUCKS_type<-inspecttbl1[ grep("STARBUCKS",inspecttbl1$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n()/2431)%>%arrange(desc(vio_freq))
+STARBUCKS_type$DBA<-"STARBUCKS"
+
+DUNKIN_type<-inspecttbl1[ grep("DUNKIN*",inspecttbl1$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n()/6004)%>%arrange(desc(vio_freq))
+DUNKIN_type$DBA<-"DUNKIN"
+
+PICCOLO_type<-inspecttbl1[ grep("PICCOLO*",inspecttbl1$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n()/339)%>%arrange(desc(vio_freq))
+PICCOLO_type$DBA<-"PICCOLO"
+
+GREGORY_type<-inspecttbl1[ grep("GREGORY'S COFFEE*",inspecttbl1$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n()/98)%>%arrange(desc(vio_freq))
+GREGORY_type$DBA<-"GREGORY"
+
+type<-rbind(STARBUCKS_type[1:5,], DUNKIN_type[1:5,],PICCOLO_type[1:5,],GREGORY_type[1:5,])
+
+
+# Change to base on violation code ~ instead of top violation freq.
+
+ggplot(type, aes(x = VIOLATION.CODE, y = vio_freq, fill = DBA)) +
+  geom_col(position = "dodge") +
+  ggtitle("Most Freq Violation Code") +
+  theme_grey(16)
+
+type$DBA<-factor(type$DBA)
+
+ggplot(type, aes(x = VIOLATION.CODE, y = vio_freq)) +
+  geom_col(position = "dodge",fill="tan2") +
+  facet_grid(~ fct_relevel(type$DBA,"STARBUCKS"),scales = 'free')+
+  ggtitle("Most Freq Violation Code") +
+  theme_grey(16)
+
+# View(distinct(inspecttbl1,VIOLATION.DESCRIPTION,VIOLATION.CODE))
+# 08A vermin
+# 04N flies
+
+
+
+```
+
+
+```{r 3CAFECODECATEGORICAL}
+# select code c('10F','10B','08A') 
+
+code<-inspecttbl1%>%filter(VIOLATION.CODE=='10F'|VIOLATION.CODE=='10B'|VIOLATION.CODE=='08A')%>%mutate(year = format(INSPECTION.DATE, "%Y"),month = format(INSPECTION.DATE, "%Y"))
+STARBUCKS_type<-code[ grep("STARBUCKS",code$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n())%>%arrange(desc(vio_freq))
+STARBUCKS_type$DBA<-"STARBUCKS"
+
+DUNKIN_type<-code[ grep("DUNKIN*",code$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n())%>%arrange(desc(vio_freq))
+DUNKIN_type$DBA<-"DUNKIN"
+
+PICCOLO_type<-code[ grep("PICCOLO*",code$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n())%>%arrange(desc(vio_freq))
+PICCOLO_type$DBA<-"PICCOLO"
+
+GREGORY_type<-code[ grep("GREGORY'S COFFEE*",code$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n())%>%arrange(desc(vio_freq))
+GREGORY_type$DBA<-"GREGORY"
+
+code<-rbind(STARBUCKS_type[1:5,], DUNKIN_type[1:5,],PICCOLO_type[1:5,],GREGORY_type[1:5,])
+code$DBA<-factor(code$DBA)
+code$DBA<-fct_relevel(code$DBA,"STARBUCKS")
+mosaic(VIOLATION.CODE ~ DBA, code, direction = c("v", "h"),labeling= labeling_border(rot_labels = c(15,0,0,0))) #gp = gpar(fill = c("blue", "lightblue"),rot_labels=c(0,90,0,0),just_labels="right" )
+
+
+#, labeling= labeling_border(rot_labels = c(0,90,0,0), 
+                                  # just_labels = c("center", 
+                                      #           "center", 
+                                       #          "center", 
+                                       #           "right"))
+
+```
+
+```{r STARBUCKS}
+# per year/date
+CAFE<-inspecttbl1%>%filter(CUISINE.DESCRIPTION=="CafÃ©/Coffee/Tea")%>%mutate(year = format(INSPECTION.DATE, "%Y"),month = format(INSPECTION.DATE, "%m"))
+STARBUCKS<-CAFE[grep("STARBUCKS",CAFE$DBA),]%>%group_by(year,month)%>%summarise(MEAN = mean(SCORE))
+STARBUCKS<-STARBUCKS%>%filter(year!="2018",year!="2014")
+STARBUCKS
+
+######TRY QUaRTERly SCORE # group by quater of the year
+ggplot(STARBUCKS, aes(as.numeric(month), MEAN)) + geom_line() +#color = symbol
+    ggtitle("STARBUCKS VIOLATION SCORE") +
+    labs (x = "", y = "SCORE") +
+  facet_grid(~year)+
+    theme_grey(16) +
+    theme(legend.title = element_blank())
+
+
+# select 08A meanscore with date
+STARBUCKS<-CAFE[grep("STARBUCKS",CAFE$DBA),]%>%group_by(year,month)%>%filter(VIOLATION.CODE=="08A")%>%summarise(SCORE08A = mean(SCORE))
+STARBUCKS<-STARBUCKS%>%filter(year!="2018",year!="2014")
+STARBUCKS
+
+ggplot(STARBUCKS, aes(as.numeric(month), SCORE08A)) + geom_line() +
+    ggtitle("STARBUCKS VIOLATION SCORE") +
+    labs (x = "", y = "SCORE") +
+  facet_grid(~year)+
+    theme_grey(16) +
+  scale_x_discrete(name ="Month", 
+                    limits=seq(1, 12, 1))+
+    theme(legend.title = element_blank())
+
+###########alternative#######
+yearmonth<-inspecttbl1%>%filter(CUISINE.DESCRIPTION=="CafÃ©/Coffee/Tea")%>%mutate(yearmonth = format(INSPECTION.DATE, "%Y-%m"))
+STARBUCKS<-yearmonth[grep("STARBUCKS",yearmonth$DBA),]%>%group_by(yearmonth)%>%filter(VIOLATION.CODE=="08A")%>%summarise(SCORE08A = mean(SCORE))
+#STARBUCKS<-STARBUCKS%>%filter(year!="2018",year!="2014")
+#STARBUCKS
+
+library(zoo)
+
+#as.Date(as.yearmon(STARBUCKS$yearmonth, "%Y-%m"))
+p<-ggplot(STARBUCKS, aes(as.Date(as.yearmon(STARBUCKS$yearmonth, "%Y-%m")), SCORE08A)) + geom_line() +
+  geom_point()+
+    ggtitle("STARBUCKS VIOLATION SCORE") +
+    labs (x = "", y = "SCORE") +
+ # scale_x_discrete(name ="Month", 
+    #                limits=seq(1, 12, 1))+
+  #facet_grid(~year)+
+    theme_grey(16) +
+    theme(legend.title = element_blank())
+
+p <- ggplotly(p)
+p
+```
+
+```{r STARBUCKBYBORO}
+# analysis of area
+
+STARBUCKS<-CAFE[grep("STARBUCKS",CAFE$DBA),]%>%group_by(BORO,year)%>%filter(VIOLATION.CODE=="08A")%>%summarise(SCORE08A = mean(SCORE))
+STARBUCKS<-STARBUCKS%>%filter(year!="2018",year!="2014")
+
+ggplot(STARBUCKS, aes(reorder(BORO,SCORE08A), SCORE08A)) +
+  geom_bar(stat = 'identity',fill="tan2")  +
+  facet_grid(~year)+
+  #coord_flip()+
+  labs(title="Mean 08A By BORO ",x = "NYC Borough", y = "08A Violation Score")+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+
+#   labs () x name rotate
+#
+
+```

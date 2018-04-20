@@ -159,7 +159,11 @@ g<-ggplot(csv, aes(x = year, y = MEAN, fill = DBA)) +
   facet_grid(fct_relevel(score_boro$BORO,"MANHATTAN")~.) +
   ggtitle("Mean Violation Score") +
   theme_grey(16)
-g
+install.packages("ggthemes")
+library(ggthemes)
+
+g+ scale_colour_colorblind()
+
 ggplotly(g,tooltip=c("x", "y"))
 ```
 

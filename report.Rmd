@@ -48,13 +48,14 @@ library(extracat)
 library(lubridate)
 library(xts)
 library(plotly)
+library(tidyr)
 #source('~/EDAV/project_starter.Rmd')
 ```
 
 
 ## Dataset: NYC Restaurant Inspection Data
 ```{r, echo = FALSE}
-#data <- read.csv('data/DOHMH_New_York_City_Restaurant_Inspection_Results.csv', header =T,stringsAsFactors=FALSE, fileEncoding="latin1")
+#data <- read.csv('~/desktop/DOHMH_New_York_City_Restaurant_Inspection_Results.csv', header =T,stringsAsFactors=FALSE, fileEncoding="latin1")
 load('~/EDAV/data/data.RData')
 keep_cols <- c('DBA','BORO', 'ZIPCODE','CUISINE.DESCRIPTION','INSPECTION.DATE','VIOLATION.CODE','VIOLATION.DESCRIPTION','SCORE', 'GRADE','INSPECTION.TYPE')
 data[data==""] <- NA

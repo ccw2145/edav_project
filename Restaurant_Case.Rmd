@@ -140,15 +140,15 @@ Chain Restuarant
 
 #extra levels(as.factor(inspecttbl1$CUISINE.DESCRIPTION))
 
-inspecttbl%>%filter(DBA =="STARBUCKS")
+#inspecttbl%>%filter(DBA =="STARBUCKS")
 # dis-regarding rows from initial inspections as grades and scores are not counted
 STARBUCKS<-inspecttbl%>%filter(DBA=="STARBUCKS", GRADE!='A', INSPECTION.TYPE!='Cycle Inspection / Initial Inspection', CRITICAL.FLAG=='Critical')
 
 # critical score and inspection type of chain restaurant
-inspecttbl1%>%filter(DBA=="STARBUCKS")%>%group_by(DBA,INSPECTION.DATE,BORO)%>%summarise(mean(SCORE))
+
+#inspecttbl1%>%filter(DBA=="STARBUCKS")%>%group_by(DBA,INSPECTION.DATE,BORO)%>%summarise(mean(SCORE))
 
 # store per year average critical score variation
-
 
 cafe<-inspecttbl1%>%filter(CUISINE.DESCRIPTION=="CafÃ©/Coffee/Tea")%>%mutate(year = format(INSPECTION.DATE, "%Y"))#%>%group_by(DBA,year)%>%summarise(mean(SCORE))
 
@@ -311,5 +311,4 @@ ggplot(STARBUCKS, aes(reorder(BORO,SCORE08A), SCORE08A)) +
   labs(title="Mean 08A By BORO ",x = "NYC Borough", y = "08A Violation Score")+
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
 
-#   labs () x name rotate
 ```

@@ -125,7 +125,7 @@ df6$inspection <- c("re")
 colnames(df6) <- c("grade","Freq","imputation","inspection")
 #summarise(re_insp_df,sum(Freq))
 ```
-```{r, fig.width = 4,fig.height = 4}
+```{r, fig.width = 10,fig.height = 10}
 df7 <- rbind(df1,df2,df3,df4,df5,df6)
 df7 <- droplevels(df7)
 df7$imputation <- as.factor(df7$imputation)

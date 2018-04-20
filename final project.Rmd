@@ -1,0 +1,212 @@
+---
+title: "final project"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+** Missing Grades **
+
+```{r}
+# pre-processing
+data = read.csv("/Users/shihhuayu/Downloads/DOHMH_New_York_City_Restaurant_Inspection_Results.csv", header = TRUE)
+library(tidyverse)
+keep_cols <- c('DBA', 'BORO', 'ZIPCODE','CUISINE.DESCRIPTION','INSPECTION.DATE','VIOLATION.CODE','SCORE', 'GRADE','INSPECTION.TYPE','GRADE.DATE')
+df <- data %>% select(keep_cols)
+
+# remove new restaurants and restaurants with no scores
+df <- filter(df,INSPECTION.DATE != '1/1/1900')
+df <- filter(df,!is.na(SCORE))
+
+df <- filter(df, `INSPECTION.TYPE`=="Cycle Inspection / Initial Inspection" | `INSPECTION.TYPE` == "Pre-permit (Operational) / Initial Inspection" | `INSPECTION.TYPE`=="Cycle Inspection / Re-inspection" | `INSPECTION.TYPE` == "Pre-permit (Operational) / Re-inspection")
+
+colnames(df) <- c("name", "boro", "zipcode", "cuisine", "inspection_date", 
+                  "violation_code", "score", "grade",
+                  "inspection_type", "grade_date")
+
+df <- df[!duplicated(df[c('name', 'inspection_date', 'grade')]),]
+```
+
+In this section, we will be focusing on the grades the restaurants in NYC received. Like before, we exclued those with dates = 1/1/1900, which indicated that they're new restaurants yet to be inspected. We also excluded rows without a score since those without a score would also have no grade and that grades are determined based on scores. And we're keeping missing grades as of now for further investigation later on.
+
+According to the manual of this data set, only inspections of the type in the following four categories are gradable:
+- Cycle Inspection/Initial Inspection
+- Cycle Inspection/Re-Inspection
+- Pre-Permit (Operational)/Initial Inspection
+- Pre-Permit (Operational)/Re-Inspection)
+Therefore, in this section, we filtered out restaurants that have inspection types not from the above four categories. Also, for the following studies, we will exclude grades that are "Not Yet Graded", "P", or "Z" which indicate pending grades under different circumstances.
+
+In addition, a restaurant can receive multiple violtaions within the same day of an inspection, resulting in multiple rows in the data set. Therefore, the duplicated grades given to a particular restaurant on the same day should be only counted once.
+
+We first looked at the distribution of grades for A, B, and C and excluding missing values.
+```{r}
+ggplot(filter(df,grade=='A'|grade=='B'|grade=='C'), aes(x=grade)) + geom_bar() + labs(title="Restaurant Grades")
+```
+
+We then looked at how many missing values there are in grades.
+```{r}
+skimr::skim(df$grade)
+```
+
+According to the summary statistics above, we see that there are many inspections that have no grades (ie empty values). We then checked the manual to try to figure out why there are missing values and ways to deal with them. According to the manual, for restaurants that didn't receive a score less than 14 (which corresponded to an A) during their initial inspection, they would be given another chance for re-inspection. And a grade would not be given until re-inspection. In order to capture this information and conduct some futher studies, we inputed the missing grades by converting scores to grades according to NYC Department of Health and Mental Hygiene's (DOHMH) grading rules.
+
+
+```{r}
+convert_to_grade <- function(x){
+  if (x < 14){
+    return("A")
+  }
+  else if(x > 28){
+    return("C")
+  }
+  else {
+    return("B")
+  }
+}
+df$imp_grade <- sapply(df$score, convert_to_grade)
+```
+
+We're now interested in whether there is a difference in the grade distribution between simply looking at grades given by NYC DOHMH as they are and grades that include information of initial inspections.
+
+```{r}
+library(gridExtra)
+p1 <- ggplot(filter(df,grade=='A'|grade=='B'|grade=='C'), aes(x=grade)) + geom_bar() + labs(title="Restaurant Grades")
+p2 <- ggplot(filter(df,(imp_grade=='A'|imp_grade=='B'|imp_grade=='C')&(inspection_type=="Cycle Inspection / Initial Inspection" | inspection_type== "Pre-permit (Operational) / Initial Inspection")), aes(x=imp_grade)) + geom_bar() + labs(title="Restaurant Grades at Initial Inspections",x="grade")
+grid.arrange(p1, p2, nrow = 1)
+```
+
+From the above graphs, we can see that the distributions are quite different. If we had only simply looked at the grades given as they were (graph on the left), the percentage of A restaurants would be pretty high. However, looking at the graph on the right tells us that actually many restaurants did not receive an A at their initial inspection.
+
+Since the above graph on the left consists of both initial inspection and re-inspection grades without missing grades while the graph on the right consists of only initial inspection with imputed grades, it could be hard to make a direct comparison. Therefore, we introduced two variables explained below and made a mosaic plot for smoother transitions from one to another for easier comparison, which also incoporates information about the different sample sizes.
+
+- imputation: yes = missing grades are imputed as discussed previously; no = missing grades are excluded
+- inspection: initial = initial insepction; re = re-inspection; both = initial and re-inspection combined
+
+Note that, non-imputed data are just a subset of the imputed data and also initial inspection and re-inspection combined would belong to the "both" category for inspection. We did this because looking at the "both" category is the natural way we'd first look at the data and it'd be hard to imagine this category and doing the math in our head ourselves if we're to only give the "initial" and "re" categories.
+
+```{r}
+df1 <- filter(df, grade=='A'|grade=='B'|grade=='C') %>% select(c('inspection_type','grade')) %>% group_by(grade) %>% summarise(Freq=n())
+df1$imputation <- c("no")
+df1$inspection <- c("both")
+colnames(df1) <- c("grade","Freq","imputation","inspection")
+#summarise(all_insp_df,sum(Freq))
+
+df2 <- filter(df, grade=='A'|grade=='B'|grade=='C') %>% select(c('inspection_type','grade')) %>% filter(inspection_type=="Cycle Inspection / Initial Inspection" | inspection_type== "Pre-permit (Operational) / Initial Inspection") %>% group_by(grade) %>% summarise(Freq=n())
+df2$imputation <- c("no")
+df2$inspection <- c("initial")
+colnames(df2) <- c("grade","Freq","imputation","inspection")
+#summarise(all_insp_df,sum(Freq))
+
+df3 <- filter(df, grade=='A'|grade=='B'|grade=='C') %>% select(c('inspection_type','grade')) %>% filter(inspection_type=="Cycle Inspection / Re-inspection" | inspection_type== "Pre-permit (Operational) / Re-inspection") %>% group_by(grade) %>% summarise(Freq=n())
+df3$imputation <- c("no")
+df3$inspection <- c("re")
+colnames(df3) <- c("grade","Freq","imputation","inspection")
+#summarise(all_insp_df,sum(Freq))
+
+df4 <- df %>% select(c('inspection_type','imp_grade')) %>% group_by(imp_grade) %>% summarise(Freq=n())
+df4$imputation <- c("yes")
+df4$inspection <- c("both")
+colnames(df4) <- c("grade","Freq","imputation","inspection")
+#summarise(imp_insp_df,sum(Freq))
+
+df5 <- df %>% select(c('inspection_type','imp_grade')) %>% filter(inspection_type=="Cycle Inspection / Initial Inspection" | inspection_type== "Pre-permit (Operational) / Initial Inspection") %>% group_by(imp_grade) %>% summarise(Freq=n())
+df5$imputation <- c("yes")
+df5$inspection <- c("initial")
+colnames(df5) <- c("grade","Freq","imputation","inspection")
+#summarise(init_insp_df,sum(Freq))
+
+df6 <- df %>% select(c('inspection_type','imp_grade')) %>% filter(inspection_type=="Cycle Inspection / Re-inspection" | inspection_type== "Pre-permit (Operational) / Re-inspection") %>% group_by(imp_grade) %>% summarise(Freq=n())
+df6$imputation <- c("yes")
+df6$inspection <- c("re")
+colnames(df6) <- c("grade","Freq","imputation","inspection")
+#summarise(re_insp_df,sum(Freq))
+```
+```{r, fig.width = 10,fig.height = 10}
+df7 <- rbind(df1,df2,df3,df4,df5,df6)
+df7 <- droplevels(df7)
+df7$imputation <- as.factor(df7$imputation)
+df7$inspection <- as.factor(df7$inspection)
+vcd::mosaic(grade ~inspection+imputation,df7,main="Grade Distribution vs Inspection Type vs Imputation")
+```
+
+Note that when fixing inspection=re, there is slight difference before and after imputation when there shouldn't be because, according to the manual, it's possible that a record of the grade is simply missing in the data even if the grade was issued. And as we'd expect, without imputation (filling in missing grades), the initial inspections only have A grades. Fixing inspection=initial, we see a big difference when we impute the data -- there are about 40% of restaurants that actually did not receive an A during their first inspection. As the way the data was given to us ("both"+"none" categories), if we simply ignore the missing values, we'd assume that a high percentage of restaurants in NYC have an A. However, as shown in the graph, this is not true if we take into account the initial inspection grades (ie "yes" category). So this tells us that we shouldn't just trust that almost all restaurants in NYC have been always clean and healthy. But also, we can see that the enforcement of inspections can be effective in encouraging the restaurants to improve their cleanliness and health levels.
+
+
+** Grades vs Restaurant Types **
+
+We now shift our focus to examining if certain types of restaurants are cleaner and healthier than ther others. Since New York City requires restaurant to post their grades and the customers are often more familiar with this grading system, we decided to look at grades instead of scores. Above are tables showing top 20 restaurant types with the highest percentage of receiving an A (count of A's/total counts of A+B+C within its own category) and a C. And for this study, we decided to use grades from both initial insepctions and re-inspections excluding missing grades since these are the actual grades the restaurants will post.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+df_cuisine <- df[,c('name','cuisine','grade')]
+
+df_cuisine <- df_cuisine %>% filter(grade=='A'|grade=='B'|grade=='C')
+
+df_cuisine <- df_cuisine %>% group_by(cuisine) %>% summarise(count_A=sum(grade == "A", na.rm = T),count_B=sum(grade == "B", na.rm = T),count_C=sum(grade == "C", na.rm = T))
+
+df_cuisine <- df_cuisine %>% group_by(cuisine) %>% mutate(total_count=count_A+count_B+count_C)
+
+df_cuisine <- df_cuisine %>% group_by(cuisine) %>% mutate(percentage_A=count_A/total_count)
+
+df_cuisine <- df_cuisine %>% group_by(cuisine) %>% mutate(percentage_B=count_B/total_count)
+
+df_cuisine <- df_cuisine %>% group_by(cuisine) %>% mutate(percentage_C=count_C/total_count)
+
+library(knitr)
+kable(arrange(df_cuisine, desc(`percentage_A`))[1:20,],caption = "Top 20 A Percentages")
+kable(arrange(df_cuisine, desc(`percentage_C`))[1:20,],caption = "Top 20 C Percentages")
+```
+
+```{r}
+library(tidyverse)
+tidyv_cuisine <- df_cuisine[,c('cuisine','percentage_A','percentage_B','percentage_C','total_count')]
+tidyv_cuisine <- tidyv_cuisine %>% rename(A = percentage_A,B = percentage_B,C = percentage_C)
+
+tidyv_cuisine_top_counts <- arrange(tidyv_cuisine, desc(`total_count`))[1:20,]
+
+tidyv_cuisine_top_counts$cuisine <- factor(tidyv_cuisine_top_counts$cuisine,
+                                   levels=tidyv_cuisine_top_counts$cuisine[order(-tidyv_cuisine_top_counts$A)])
+
+levels(tidyv_cuisine_top_counts$cuisine)[levels(tidyv_cuisine_top_counts$cuisine)=="Latin (Cuban, Dominican, Puerto Rican, South & Central American)"] <- "Latin" # for better display
+
+tidyv_cuisine_top_counts <- tidyv_cuisine_top_counts %>% gather(key=GradeType,value=Percentage,-cuisine,-total_count)
+
+tidyv_cuisine_top_A <- arrange(tidyv_cuisine, desc(`A`))[1:20,]
+
+tidyv_cuisine_top_A$cuisine <- factor(tidyv_cuisine_top_A$cuisine,
+                              levels=tidyv_cuisine_top_A$cuisine[order(-tidyv_cuisine_top_A$A)])
+
+tidyv_cuisine_top_A <- tidyv_cuisine_top_A %>% gather(key=GradeType,value=Percentage,-cuisine,-total_count)
+
+tidyv_cuisine_top_C <- arrange(tidyv_cuisine, desc(`C`))[1:20,]
+
+tidyv_cuisine_top_C$cuisine  <- factor(tidyv_cuisine_top_C$cuisine,
+                              levels=tidyv_cuisine_top_C$cuisine[order(-tidyv_cuisine_top_C$C)])
+
+levels(tidyv_cuisine_top_C$cuisine)[levels(tidyv_cuisine_top_C$cuisine)=="Latin (Cuban, Dominican, Puerto Rican, South & Central American)"] <- "Latin"
+
+tidyv_cuisine_top_C <- tidyv_cuisine_top_C %>% gather(key=GradeType,value=Percentage,-cuisine,-total_count)
+
+
+ggplot(tidyv_cuisine_top_counts, aes(x=cuisine,y=Percentage,fill=GradeType)) + 
+          geom_bar(stat="identity") +
+          coord_flip()+labs(title="Top 20 Common Restaurants' Grade Percentages")
+
+ggplot(tidyv_cuisine_top_A, aes(x=cuisine,y=Percentage,fill=GradeType)) + 
+          geom_bar(stat="identity") +
+          coord_flip()+labs(title="Top 20 A Percentages")
+
+ggplot(tidyv_cuisine_top_C, aes(x=cuisine,y=Percentage,fill=GradeType,order_by())) + 
+          geom_bar(stat="identity") +
+          coord_flip()+labs(title="Top 20 C Percentages")
+```
+
+The first plot is the grade percentages for the top 20 types of restaurants with the highest total grade counts. The second plot is the grade percentages for the top 20 restaurant types that received the highest percentages of A. And the third plot is the grade percentages for the top 20 restaurant types that received the highest percentages of C.
+
+We can see that among the restaurant types with the top total counts, Cafe, Hamburgers and Donuts are the top 3 in receiving A's even though none of the made to the top 20 list of receiving A's among all restaurant types. We can also see that there are several that have 100% A's, including Cajun, Czech, Fruits/Vegetables, Not Listed/Not Applicable, Nuts/Confectionary, Scandinavian and Soups. However, if we look closer on the tables above, these types of restaurants actually have a very small sample size (<=30). Therefore, it's possible that them having very few samples made it less likely to have that one bad sample in order to achieve 100% A's. Among the top 20 C list, we see that Polynesian, Iranian, and Bangladeshi made the top 3. However, if we look at the table again, we see that both Polynesian and Iranian have a sample less than 10. So again, this tells us that they may not be representative. And in general, the top A list consists of European food while the top C list is a mixture of Latin, Asian, African, Caribbean, Australian, and Spanish restaurants.
+

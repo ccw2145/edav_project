@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Seconds</title>
+    <script src="https://d3js.org/d3.v4.min.js"> ></script>
+
+	</head>
+	<body>
+
+
+<p id ='org'>Missing values in original data</p>
+<p id ='nonew'>Missing values after removing new restaurants </p>
+<p id ='nona'>Missing values after removing all NAs in score</p>
+
+<div id="htmlEmbed"></div>
+<script>
+
+var a = d3.selectAll("#htmlEmbed").append("img");
+
+    a.attr("src","missing_org.svg")
+    .attr("width", 600)
+    .attr("height", 600);
+
+d3.select("#org").on("click",function(){
+  
+  a.attr("src","missing_org.svg")
+    .attr("width", 600)
+    .attr("height", 600)
+    // .append("img")
+    // .attr("src","../images/org.png")
+  });
+  
+
+d3.select("#nonew").on("click",function(){
+  
+
+  a
+    .attr("src","missing_no_new.svg")
+    .attr("width", 600)
+    .attr("height", 600)});
+
+d3.select("#nona").on("click",function(){
+
+  a
+    .attr("src","missing_no_na.svg")
+    .attr("width", 600)
+    .attr("height", 600)});
+
+</script>
+
+	</body>
+</html>

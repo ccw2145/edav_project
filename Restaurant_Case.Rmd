@@ -6,13 +6,22 @@ output: html_document
 ---
 
 
-```{r resturant}
+```{r, include=FALSE}
 library(dplyr)
 library(ggplot2)
 library(plotly)
-inspecttbl <- read.csv("data/DOHMH_New_York_City_Restaurant_Inspection_Results.csv", header = T, sep=',', na.strings=c("NA","N/A",""), colClasses = "character")
-glimpse(inspecttbl)
+library(readr)
+library(vcd)
+library(grid)
+library(tidyverse)
+library(zoo)
+load('~/EDAV/data/data_s.RData')
 
+#inspecttbl <- read.csv("data/DOHMH_New_York_City_Restaurant_Inspection_Results.csv", header = T, sep=',', na.strings=c("NA","N/A",""), colClasses = "character")
+#glimpse(inspecttbl)
+```
+
+```{r resturant}
 #####Date######
 inspecttbl$"INSPECTION.DATE"<-(as.Date(inspecttbl$'INSPECTION.DATE', "%m/%d/%Y"))
 inspecttbl$"GRADE.DATE"<-(as.Date(inspecttbl$'GRADE.DATE', "%m/%d/%Y"))
@@ -42,7 +51,7 @@ gradables <- c("Cycle Inspection / Initial Inspection" , "Cycle Inspection / Re-
 
 inspecttbl1 <- (filter(inspecttbl, `INSPECTION.TYPE` %in% gradables))
 
-View(inspecttbl1)
+#View(inspecttbl1)
 
 
 ########Get Grade in DataFrame########
@@ -102,7 +111,7 @@ ggplot(res_critical_vio_count[1:10,c(2,3)], aes(reorder(RESTAURANT,num_critical_
 
 ```{r 2plots}
 # restaurant have the highest violation score
-citical_count_score
+# citical_count_score
 # Define bad restaurants as violation  Score > 27 [Grade C] ~ 5 occurance of Grade C
 citical_count_score<-count%>%
   filter(CRITICAL.FLAG=='Critical',SCORE>27,count>5)%>%
@@ -120,14 +129,15 @@ ggplot(result, aes(reorder(RESTAURANT,SCORE), SCORE)) +
   labs(title="Worest 10 Highest Violation Score Restaurant ")
 
 ```
+
 Chain Restuarant
+
 ```{r CAFE}
-library(tidyverse)
 #### INSPECTION.TYPE Violation related####
 # we focus on instore sanity check of the inspection#
 
-                #extra levels(as.factor(inspecttbl1$CUISINE.DESCRIPTION))
-
+#extra levels(as.factor(inspecttbl1$CUISINE.DESCRIPTION))
+inspecttbl
 inspecttbl%>%filter(DBA =="STARBUCKS")
 # dis-regarding rows from initial inspections as grades and scores are not counted
 STARBUCKS<-inspecttbl%>%filter(DBA=="STARBUCKS", GRADE!='A', INSPECTION.TYPE!='Cycle Inspection / Initial Inspection', CRITICAL.FLAG=='Critical')
@@ -165,10 +175,7 @@ ggplot(score_boro, aes(x = year, y = MEAN, fill = DBA)) +
   theme_grey(16)
 ```
 
-```{r CAFE}
-library(readr)
-library(vcd)
-library(grid)
+```{r CAFE2}
 # CAFE common violation type
 
 STARBUCKS_type<-inspecttbl1[ grep("STARBUCKS",inspecttbl1$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n()/2431)%>%arrange(desc(vio_freq))
@@ -204,8 +211,6 @@ ggplot(type, aes(x = VIOLATION.CODE, y = vio_freq)) +
 # View(distinct(inspecttbl1,VIOLATION.DESCRIPTION,VIOLATION.CODE))
 # 08A vermin
 # 04N flies
-
-
 
 ```
 
@@ -276,8 +281,6 @@ STARBUCKS<-yearmonth[grep("STARBUCKS",yearmonth$DBA),]%>%group_by(yearmonth)%>%f
 #STARBUCKS<-STARBUCKS%>%filter(year!="2018",year!="2014")
 #STARBUCKS
 
-library(zoo)
-
 #as.Date(as.yearmon(STARBUCKS$yearmonth, "%Y-%m"))
 p<-ggplot(STARBUCKS, aes(as.Date(as.yearmon(STARBUCKS$yearmonth, "%Y-%m")), SCORE08A)) + geom_line() +
   geom_point()+
@@ -307,6 +310,4 @@ ggplot(STARBUCKS, aes(reorder(BORO,SCORE08A), SCORE08A)) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
 
 #   labs () x name rotate
-#
-
 ```

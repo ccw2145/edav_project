@@ -27,33 +27,148 @@ font-size: 12pt;
 (Explain why you chose this topic, and the questions you are interested in studying.
 List team members and a description of how each contributed to the project.)
 
-* In this project,...
-* Team Members:
+NYC is a hub of diversity, yet there is one similarity that 8.5 million people shares – everyone eats. Over 26,000 eating establishments in the city (according to the NYC Department of Health and Mental Hygiene or DOHMH) thrives here because New Yorkers dine out over 58% of their lunches or dinners and spend $46.14 on average for each meal per person (Zagat Dining Trends Survey 2018). For these customers, ourselves included, the food that we purchase so frequently and at such high costs is a major factor influencing our health. To help people stay informed about food safety and the potential health risks that eating out poses, we conducted our research about restaurants in NYC based on DOHMH's source data hosted on Open Data.
 
 
-```{r echo=TRUE, message=FALSE}
-library(knitr)
-```
+* Team Members: Cindy Wu, Selina Tang, Lisa Kim, Julie Yu
 
-```{r packages, message=FALSE, warning=FALSE}
+Cindy- data description, data quality, time series visualization
+Selina- restaurant case
+Lisa- violation distribution and analysis
+Julie-
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 ### Packages and Libraries
+library(knitr)
 #<<packages_and_libraries>>
+library(dplyr)
+library(tidyverse)
+library(skimr)
+library(extracat)
+library(lubridate)
+library(xts)
+library(plotly)
+#source('~/EDAV/project_starter.Rmd')
 ```
 
 
 ## Dataset: NYC Restaurant Inspection Data
-* Our dataset is collected from NYC Open Data and can be directly accessed through - https://data.cityofnewyork.us/Health/DOHMH-New-York-City-Restaurant-Inspection-Results/xx67-kt59
+```{r, echo = FALSE}
+#data <- read.csv('data/DOHMH_New_York_City_Restaurant_Inspection_Results.csv', header =T,stringsAsFactors=FALSE, fileEncoding="latin1")
+load('~/EDAV/data/data.RData')
+keep_cols <- c('DBA','BORO', 'ZIPCODE','CUISINE.DESCRIPTION','INSPECTION.DATE','VIOLATION.CODE','VIOLATION.DESCRIPTION','SCORE', 'GRADE','INSPECTION.TYPE')
+data[data==""] <- NA
+```
+* Our [dataset][data] is collected from NYC Open Data along with a [data description][des] provided by the website
 
-* 375,989 rows of data entries of NYC restaurant information, violations and ratings collected between June 2012 - Mar 2018.
+* 375,989 rows of data entries of NYC restaurant inspection information between June 2012 - Mar 2018
 
-* Each row consists of (...)
+* Each row consists of 18 variables including (and not limited to) restaurant information (name, address, zipcode, borough, cuisine type), inspection results (inspection type, inspection date), violation details (violation code with corresponding violation description), and scorings (score, letter grade). For the sole purpose of efficiently visualizing inspection results, we only selected the most relevant and most representative 10 variables in the dataset to conduct further exploration. The ten vairbales this report focuses on are - DBA (restaurant name), borough, zipcode, cuisine description,inspection date,violation code, violation description, score, grade, and inspection type
 
+* Variables Facts:
+  - Score and Grade: 125 unique score in the dataset ranging from -2 to 151; higher score indicate worse violations; typically <=14 points converts to grade "A""; 14-27 points converts to grade "B", and 28+ points converts to grade "C"
+  - Restaurant: 23,986 unique restaurants (based on restauant name and zipcode)
+  - Violation: 77 unique violation codes (correspoding to 77 different types of violations)
+  - Cuisine Type: 85 unique types of cuisine 
+  - Borough: 5 boroughs of New York City (Manhattan, Bronx, Brooklyn, Queens, Staten Island)
+  
+* Since restaurants go in and out of business, the dataset only records restaurants that are still active in March 2018 (last inspection included in the data)
+
+```{r, eval = FALSE, echo = FALSE}
+min(unique(df$SCORE))
+max(unique(df$SCORE))
+length(unique(na.omit(df$DBA)))
+unique(na.omit(df$BORO))
+unique(df$CUISINE.DESCRIPTION)
+df$A <- paste(df$DBA,"-",df$ZIPCODE)
+length(unique(na.omit(df$A)))
+```
 ## Data Quality
-(Provide a detailed, well-organized description of data quality, including textual description, graphs, and code.)
-```{r,eval = TRUE, fig.width=12, fig.height=4, fig.align='center', message=FALSE, warning=FALSE}
-#code here
+
+### Overview: Missing Data and data cleaning
+
+click [here][d3] to see interactive visna plots made with D3
+
+We first explore the distribution of missing data in the original dataset. As shown in the chart and plot, the most common missing pattern in the original data is Grade on its own with over 50% missing data, followed by only around 5% in scores and minor missing percentages in violation details. 
+
+```{r,  fig_height=4, fig_width=6, eval = TRUE, echo = FALSE}
+# entire dataset
+df_org <- data %>% select(keep_cols)
+skim(df_org) %>% filter(stat == "missing") %>% 
+  arrange(desc(value)) %>% select(variable, type, value) %>% mutate(percent_missing = value *100/nrow(df_org))
+#dev.off()
+
+```
+
+From the official grading system in data description, we learned that the grades are converted from scores accroding to a specific scheme for every 'gradable' inspection, and only inspections of certain types are eligble to receive a grade. Due to the large amount of missing values in Grade, we pay more attention to scores and violation details since they are good and direct reflections of inspection results and contain much fewer missing data. 
+
+In addition to grades, the data description also states that some scores are missing because there are new restarants that have yet to be inspected, and they are marked by "inspection.date = 01/01/1900". Therefore, we removed rows with new restaurants' and looked at missing values again. 
+
+The second chart shows the missing value percentages for each variable after removing new restaurants. We see a decrease in missing scores and for our exploratory analysis, we removed all missing values in scores. 
+
+
+```{r,  fig_height=4, fig_width=6, eval = TRUE, echo = FALSE}
+# new restaurants that have not been inspected
+print(paste("Number of new restaurants:", nrow(data[data$INSPECTION.DATE == '01/01/1900',])))
+df_1 <- data[data$INSPECTION.DATE != '01/01/1900',] %>% select(keep_cols)
+skim(df_1) %>% filter(stat == "missing") %>% 
+  arrange(desc(value)) %>% select(variable, type, value) %>% mutate(percent_missing = value *100/nrow(df_1))
+```
+
+The third chart summarizes the final data we used for the report. Although there are still many missing values in grades, we do not consider it bad data quality since they are intentionally left blank.The overall quality of the dataset seems quite promising at this point. 
+
+```{r,  fig_height=4, fig_width=6, eval = TRUE, echo = FALSE}
+# # missing data after removing all new restaurants and missing scores
+df <- filter(df_1,!is.na(SCORE))
+skim(df) %>% filter(stat == "missing") %>%
+  arrange(desc(value)) %>% select(variable, type, value) %>% mutate(percent_missing = value *100 /nrow(df))
 #sparsity, distribution,etc. 
 ```
+
+```{r, eval = FALSE, echo = FALSE}
+# code for visna plots for d3
+svglite("images/missing_org.svg")
+visna(df_org, sort = "b" )
+dev.off()
+svglite("images/missing_no_new.svg")
+visna(df_1, sort = 'b')
+dev.off()
+svglite("images/missing_no_na.svg")
+visna(df, sort = "b")
+dev.off()
+```
+
+### A Closer Look: borough and inspection types
+
+To ensure data quality and validify our further analysis, we inspect the data more closely based on two variables we are particularly interested in- boroughs and inspection types.
+
+```{r,fig.show='hold', out.width='50%'}
+# By borough
+percent_missing1 <- df_1 %>% group_by(BORO) %>% 
+  summarize(num_Restaurants = n(), num_Missing_Score = sum(is.na(`SCORE`))) %>% 
+  mutate(percent_Missing_Score = round(num_Missing_Score/num_Restaurants, 2)) %>% 
+  arrange(-percent_Missing_Score)
+
+percent_missing1$percent_Missing_Score
+
+ggplot(percent_missing1)+
+  geom_line(aes(x= BORO, y =percent_Missing_Score, group=1))+
+  geom_point(aes(x= BORO, y =percent_Missing_Score),color = "hotpink")+
+  ylim(0,0.15)+
+  ggtitle("Missing data percentage by borough")
+
+# By inspection type
+percent_missing <- df_1 %>% group_by(INSPECTION.TYPE) %>% 
+  summarize(num_Restaurants = n(), num_Missing_Score = sum(is.na(`SCORE`))) %>% 
+  mutate(percent_Missing_Score = round(num_Missing_Score/num_Restaurants, 2)) %>% 
+  arrange(-percent_Missing_Score)
+
+ggplot(percent_missing)+
+  geom_line(aes(x= INSPECTION.TYPE, y =percent_Missing_Score, group=1))+
+  geom_point(aes(x= INSPECTION.TYPE, y =percent_Missing_Score),color = "blue")+
+  ggtitle("Missing data percentage by Inspection Type")
+```
+Each borough has very similar percentage in missing  values so it is fair to conclude that the data qulity of our dataset is identical across the city.
 
 ## Exploratory Data Analysis
 (Provide a detailed, well-organized description of your findings, including textual description, graphs, and code.  Your focus should be on both the results and the process. Include, as reasonable and relevant, approaches that didn't work, challenges, the data cleaning process, etc.)
@@ -70,12 +185,66 @@ Correlogram
 "
 ```
 
+### Average Score by time
+
+The following time series plot shows the change in quarter average score for the past five year. There is a clear pattern that the third quarter (Jul - Sept) has the highest average score each year. Thinking in terms of season and weather, since July, August and September are typically the hottest months in NYC, we can infer that there are more violations during the summer. 
+
+```{r time series, eval = TRUE, fig.show='hold', out.width='70%', message=FALSE, warning=FALSE}
+#install.packages("xts")
+df$INSPECTION.DATE <- as.Date(as.character(df$INSPECTION.DATE),format="%m/%d/%Y")
+ts <- xts(df$SCORE,df$INSPECTION.DATE)
+quarterly <- apply.quarterly(ts, FUN =mean)
+ts_df<- data.frame(date=index(ts),score = ts)
+quarterly_df <- data.frame(date = index(quarterly), quarter_avg = quarterly)
+
+#legendtitle <- list(yref='paper',xref="paper",y=1.05,x=1.1,showarrow=F)
+plot_ly(quarterly_df[quarterly_df$date> "2013-05-16" & quarterly_df$date < "2018-03-31" ,])%>% 
+  add_lines( x=~date, y=~quarter_avg,
+        type = 'scatter',
+        mode = 'lines+markers',
+        hoverinfo = 'text',
+        text = ~paste("Quarter Date:",date,"<br> Average Score: ",round(quarter_avg)))%>%
+  add_trace(x = ~date,y = ~quarter_avg, mode = 'markers',color=I("hotpink"),marker = list(size = 8))%>%
+        layout(title = "Quarter Average Score",showlegend = FALSE)
+```
+
+```{r, eval= FALSE, echo = FALSE}
+plot_ly(ts_df) %>%
+  add_lines(x= apply.monthly(ts, FUN =mean)[,0], y=apply.monthly(ts, FUN =mean)[,1]) 
+ quarterly_df <- data.frame(date = index(quarterly), quarter_avg = quarterly)
+quarterly_df$year <- factor(year(quarterly_df$date))
+quarterly[,0]
+apply.monthly(ts, FUN =mean)[,0]
+floor_date(ts_df$date, "month")
+
+quarterly_df$year <- factor(year(quarterly_df$date))
+
+aggregate(. ~yearmon(date),ts ,mean)
+#ggplotly(g)
+```
+In the following sections, we will dive deeper into different violations, scores, and some of our most frequented restaurants.
+
+### Violations 
+```{r,child="violation_code_count.Rmd"}
+```
+
+### Restaurant by case
+```{r,child="Restaurant_Case.Rmd"}
+```
+
 ## Executive Summary
 (Provide a short nontechnical summary of the most revealing findings of your analysis  written for a nontechnical audience. The length should be approximately two pages (if we were using pages...) Take extra care to clean up your graphs, ensuring that best practices for presentation are followed.)
 
 ## Interactive Component 
 ```{r,eval = TRUE, fig.width=12, fig.height=4, fig.align='center', message=FALSE, warning=FALSE}
-#code here
 ```
 
+
 ## Conclusion
+
+
+
+
+[data]: https://data.cityofnewyork.us/Health/DOHMH-New-York-City-Restaurant-Inspection-Results/xx67-kt59?category=Health&view_name=DOHMH-New-York-City-Restaurant-Inspection-Results
+[des]: EDAV/data/about.pdf
+[d3]: EDAV/images/missing_val.html

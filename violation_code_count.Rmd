@@ -6,19 +6,14 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-## R Markdown
 
-
-```{r load data}
+```{r load data, include=FALSE}
 library(vcd)
 library(tidyverse)
-
-setwd('/Users/lisakim/Desktop/EDAV Final/')
-data <- read.csv("Restaurants.csv", header = T, sep=',', na.strings=c("NA","N/A",""), colClasses = "character")
-names(data)
+load('~/EDAV/data/data.RData')
 ```
 
-```{r Data Cleaning}
+```{r Data Cleaning, echo = FALSE}
 keep_cols <- c('DBA', 'BORO', 'ZIPCODE','CUISINE.DESCRIPTION','INSPECTION.DATE','VIOLATION.CODE','SCORE', 'GRADE','INSPECTION.TYPE')
 df <- data%>% select(keep_cols)
 
@@ -55,11 +50,9 @@ convert_to_grade <- function(x){
     return("B")
   }
 }
-
 grade <- sapply(df$score, convert_to_grade)
 df$grade <- grade
 ```
-
 
 Combining the cuisine descriptions
 ```{r More Datapreprocessing}
@@ -123,15 +116,6 @@ ggplot(violation_df_top10, aes(reorder(violation_code, count), count)) + geom_co
 The most commonly violated violation type is 10F, 'Non-food contact surface improperly constructed'. While this violation seems not too serious, the 08A and 04L are associated with vermin and mice, which sound more disgusting and serious. Moreover, 06C is the violation code that is 'Food not protected from potential source of contamination during storage, preparation, transportation, display or service.' Learning that there are restaurants in New York which have issue with vermin and mice while not properly storing and protecting foods from any potential source of contamination may suggest us to be very careful and picky when deciding which restaurant to go.
 
 ```{r}
-
-#cuisine_type <- df %>% select(cuisine) %>% group_by(cuisine) %>% summarize(count = n()) %>% #arrange(-count)
-#ggplot(cuisine_type, aes(reorder(cuisine, count), count)) + geom_col() + coord_flip() +
-#  labs(title = "Number of restaurants", x = "Cuisine")
-
-#res <- cuisine_type[1:5, ]
-#ggplot(res, aes(reorder(cuisine, count), count)) + geom_col() + coord_flip() +
-#  labs(title = "Number of restaurants", x = "Cuisine")
-
 #getting the number of restaurants for each restaurant type
 distinct_res <- df %>% select(cuisine, name) %>% distinct(cuisine, name) %>% mutate(count = 1)
 distinct_res <- distinct_res %>% select(cuisine, count) %>% group_by(cuisine) %>% summarise(total_num = sum(count)) %>% arrange(-total_num)
@@ -144,22 +128,6 @@ ggplot(top5res, aes(reorder(cuisine, total_num), total_num)) + geom_col() + coor
 ```
 
 The bar chart shows the number of restaurants for each restaurant type. Because there are more than 50 restaurant types in this data, we decide to focus on 5 most common restaurant types. The top 5 restaurant types are following: American, Italian, Chinese, Dessert, and Latin. As shown in the plot above, the most common restaurant type is American (5310), followed by Italian (2224) and Chinese (2088). 
-
-
-
-```{r}
-#df6 <- df[df$cuisine %in% res$cuisine, ]
-#df6$cuisine <- factor(df6$cuisine)
-#ggplot(df6, aes(score)) + geom_histogram(binwidth = 5, boundary = 0, color = "black", fill = "blue") + #labs(title = "Distribution of scores") +
-#  facet_grid(cuisine~., scale = "free")
-
-#df6 <- na.omit(df6)
-#df6$cuisine <- factor(df6$cuisine)
-
-#mosaic(grade~cuisine, df6, labeling = labeling_border(rot_labels = c(90, 0)))
-#mosaic(grade~boro + cuisine, df6, labeling = labeling_border(rot_labels = c(0, 0, 0)))
-
-```
 
 ```{r}
 # getting the information associated with 5 most common restaurant types
@@ -202,15 +170,7 @@ violation_code_with_restype <- function(x){
   
   ggplot(new_df, aes(reorder(violation_code, count), count)) + geom_col() + coord_flip() +
     labs(title = paste("Distribution of violation code of", x, "restaurants", sep = " "), x = "violation code")
-  
-  
 }
-```
-
-
-```{r}
-violation_code_with_restype("American")
-
 ```
 
 We first focus on the violation types that American restaurants made. In order to produce a bar chart of 10 most common violation made by these restaurants, the steps we take are following: 
@@ -224,7 +184,6 @@ While the frequency of the violation code changes (because we are only looking a
 
 ```{r}
 violation_code_with_restype("Italian")
-
 ```
 
 Next, we decide to explore the violation types the Italian restaurants have made. Comparing all three plots, it seems that the restaurants of different types tend to make similar violations. The 10 most common violation types for Italian restaurants are exactly same as the American restaurants except that the orders of violation codes (in terms of frequency) changes. The Italian restaurants in New York area seem to violate the rule associated with installing and maintaining plumbing properly more than the American restaurants in New York. Moreover, compared to the overall frequency of violation codes, these two types of restaurants seem to have more issue with mice.
@@ -239,12 +198,10 @@ The 10 most common violation types for Chinese restaurants seem to be slightly d
 
 ```{r}
 violation_code_with_restype("Dessert")
-
 ```
 
 ```{r}
 violation_code_with_restype("Latin (Cuban, Dominican, Puerto Rican, South & Central American)")
-
 ```
 
 The bar chart of the violation codes for Latin and Dessert restaurants look almost the same as other three types of restaurants. The violation associated with the evidence of mice or live mice present in facility's food and/or non-food areas have frequently made in both types of restaurants compared to other violations. Moreover, Latin restaurants have the issue of roaches as well. The Dessert type restaurants tend to violate the code associated with sanitizing utensils and washing food contact surface more often. Though, compared to the overall (containing all the restaurants) frequency of the violation codes, the code associated with the mice one is ranked lower for these types of restaurants.

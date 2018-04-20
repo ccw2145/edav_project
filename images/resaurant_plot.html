@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+ <head>
+ 
+           <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+           <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+           <script src="http://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+            <script src="jquery.csv-0.71.js"></script>
+           <script type="text/javascript">google.load('visualization', '1', {'packages':['corechart', 'map']});</script>
+
+            
+
+            <script type="text/javascript">
+            google.charts.load('current', {'packages':['corechart', 'controls', 'map', 'table']});
+
+           $.get('https://raw.githubusercontent.com/selinatang95/EDAVCommunity/master/plot/scatter_chart.csv', function(csvData){
+
+          //relative path
+             // $.get('ScatterChart_final.csv', function(csvData){
+                var memoryData = $.csv.toArrays(csvData, {
+                  onParseValue: $.csv.hooks.castToScalar
+                });
+              var resData = new google.visualization.DataTable();
+                            resData.addColumn('string', 'RESTAURANT');
+                            resData.addColumn('number', 'count');
+                            // A column for custom tooltip content
+                            resData.addColumn({name:'count', type:'number', role:'tooltip'});
+
+              var tempArray = [];
+              for (i = 1; i < memoryData.length; i++){
+                tempArray.push([memoryData[i][2],memoryData[i][3], memoryData[i][4]]);
+              };
+              resData.addRows(tempArray);
+              console.log(resData);
+              var options = {
+                              title: 'Chart 1\nCritical Violations Count and Scores',
+                              colors: [ '#5DADE2', '#2980B9', '#1F618D'],
+                              // This line makes the entire category's tooltip active.
+                              focusTarget: 'category',
+                             // Use an HTML tooltip.
+                              tooltip: { isHtml: true },
+                              width: 600,
+                              height: 500,
+                              hAxis: {title: 'Count',
+                                      minValue: resData.getColumnRange(1).min,
+                                      maxValue: resData.getColumnRange(1).max
+                                    },
+                              vAxis: { textStyle: {
+                                                  color: 'black',
+                                                  fontName: 'Arial',
+                                                  fontSize: 12
+                                                  },
+                                    title: 'Score ',titleTextStyle: {fontName: 'Arial Black'},
+                                    minValue: resData.getColumnRange(2).min,
+                                      maxValue: resData.getColumnRange(2).max
+                                    },
+                             hAxis: { textStyle: {
+                                                  color: 'black',
+                                                  fontName: 'Arial',
+                                                  fontSize: 12
+                                                  },
+                                      title: 'Restaurant',titleTextStyle: {fontName: 'Arial Black'},
+                                      minValue: resData.getColumnRange(1).min,
+                                      maxValue: resData.getColumnRange(1).max
+                                     },
+                              legend: 'none',
+                              bars: 'horizontal'
+                           }
+              var chart = new google.visualization.ScatterChart(document.getElementById('ViolationChar1'));
+              chart.draw(resData, options);
+              });
+
+            </script>
+
+
+ </head>
+
+ <body>
+  <p style="color:black;text-align:center"><b><br>
+                         The below map shows the worst scored (scores greater than 27) restaurants from 2014 to 2018<br> </b>
+                        </p>
+  <div id="ViolationChar1" style = 'width: 1200px; height: 500px;float:rightt'></div>
+
+ </body>
+</html>

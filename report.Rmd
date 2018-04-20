@@ -232,5 +232,5 @@ In the following sections, we will dive deeper into different violations, scores
 
 
 [data]: https://data.cityofnewyork.us/Health/DOHMH-New-York-City-Restaurant-Inspection-Results/xx67-kt59?category=Health&view_name=DOHMH-New-York-City-Restaurant-Inspection-Results
-[des]: EDAV/data/about.pdf
-[d3]: EDAV/images/missing_val.html
+[des]: data/about.pdf
+[d3]: images/missing_val.html

@@ -1,0 +1,302 @@
+---
+title: "restaurant"
+author: "Siwen Tang"
+date: "4/20/2018"
+output: html_document
+---
+```{r preprocess, echo=FALSE, message=FALSE, warning=FALSE}
+
+########Note: all plots are generated in two ways, plotly and ggplot
+# To everyone running my code section [CAFE Mean Violation Score] the plot, for some reason, my ggplot library have some issue correctly plot it after I update ggplot2 from github. So currently I am using a trick [saving result to local and then read it as csv] to visualize the plot..
+# there is coding redundency [a lot], which I could improve in the future =.=.
+#########
+
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(zoo)
+library(tidyverse)
+library(readr)
+library(vcd)
+library(grid)
+#source('~/EDAV/project_starter.Rmd')
+
+# load('~/EDAV/data/data.RData')
+# keep_cols <- c('DBA','BORO', 'ZIPCODE','CUISINE.DESCRIPTION','INSPECTION.DATE','VIOLATION.CODE','VIOLATION.DESCRIPTION','SCORE', 'GRADE','INSPECTION.TYPE')
+# data[data==""] <- NA
+
+inspecttbl <- read.csv("data/DOHMH_New_York_City_Restaurant_Inspection_Results.csv", header = T, sep=',', na.strings=c("NA","N/A",""), colClasses = "character")
+# glimpse(inspecttbl)
+
+#####Date######
+inspecttbl$"INSPECTION.DATE"<-(as.Date(inspecttbl$'INSPECTION.DATE', "%m/%d/%Y"))
+inspecttbl$"GRADE.DATE"<-(as.Date(inspecttbl$'GRADE.DATE', "%m/%d/%Y"))
+inspecttbl$"RECORD.DATE"<-(as.Date(inspecttbl$'RECORD.DATE', "%m/%d/%Y"))
+# class(inspecttbl$'RECORD.DATE')
+
+##### DataFrame Conversion #######
+inspecttbl$GRADE <- factor(inspecttbl$GRADE, levels = c("A", "B", "C", "Z", "Not Yet Graded"), ordered = TRUE)
+inspecttbl$`CUISINE.DESCRIPTION` <- factor(inspecttbl$`CUISINE.DESCRIPTION`)
+inspecttbl$`CRITICAL.FLAG` <-   factor(inspecttbl$`CRITICAL.FLAG`, levels = c("Critical", "Not Critical", "Not Applicable"), ordered = T)
+inspecttbl$CAMIS <- as.numeric(inspecttbl$CAMIS)
+inspecttbl$SCORE <- as.numeric(inspecttbl$SCORE)
+
+###### Exploration ######
+# No. of distinct restaurants
+# n_distinct(inspecttbl$CAMIS)
+# Data Cleaning -- remove inspection 1900 
+inspecttbl<-filter(inspecttbl, `INSPECTION.DATE` != "1900-01-01")
+# range(inspecttbl$`INSPECTION.DATE`)
+
+```
+
+```{r Serious Violation Resterant}
+# Top 10 Resteraurants Ranked by Number of Critical Violation
+# Regardless of type of violation
+
+# group data
+restaurant <- inspecttbl%>%group_by(INSPECTION.DATE, DBA, SCORE, GRADE, CRITICAL.FLAG,BORO, BUILDING, STREET, ZIPCODE)
+# renaming DBA(doing business as usual) to restaurant
+restaurant<- restaurant%>%rename( RESTAURANT = DBA)
+# Count voilations according to restaurant and type of violation [~distinct] count the instances regardless of violation type per score, per restaurant, per date
+count<-restaurant%>%summarise(count=n())
+
+# select only critical violation
+citical_count<-count%>%filter(CRITICAL.FLAG=='Critical')
+
+# Find the worest restaurants by calculating the number of that violate with Grade C under critical situation
+citical_count<-citical_count%>%filter(SCORE>27)%>%group_by(RESTAURANT,STREET)%>%mutate(violation_count=sum(count))
+
+
+# order the data # restaurant the receives violates grade C most
+res_critical_vio_count<-distinct(citical_count%>%select(STREET,RESTAURANT,violation_count)%>%arrange(desc(violation_count)))
+result<-res_critical_vio_count[1:10,c(2,3)]
+result$RESTAURANT<-reorder(result$RESTAURANT,result$violation_count)
+g<-ggplot(result, aes(RESTAURANT, violation_count)) +
+  geom_bar(stat = 'identity',fill="tan2")  +
+  coord_flip()+
+  #xlabel,ylabel 
+  labs(title="10 Worst Resteraurants Ranked by Number of \n Critical Violation ",x = "", y = "Critical Violation Count")
+g
+ggplotly(g,tooltip=c("x", "y"))
+
+```
+We want to evaluate the restaurants in NYC inspection and find the worst restaurants in NYC. We define two ways to evaluate how bad the restaurant is, by violation incidents and by score of those violation. For the first method, we count the number of violation incident with grade C under critical condition [CRITICAL.FLAG=='Critical'] for each restaurant. Across all records, we plot the 10 restaurants with highest violation count. Overall, there are 5 restaurants have critical violation counts more than 40. Note that the first one 'Gang San Deul' receives over 45 violation that is marked critical. We can see that some of them are Asian Cuisine from the restaurant names.
+
+
+```{r Highest Violation Score Restaurant}
+# restaurant have the highest violation score
+# Define bad restaurants as violation  Score > 27 [Grade C] ~ 5 occurance of Grade C
+citical_count_score<-citical_count%>%
+  filter(SCORE>27,count>5)%>%arrange(desc(SCORE))
+
+result<-citical_count_score[1:10,c(2,3,10)]
+result$RESTAURANT<-reorder(result$RESTAURANT,result$SCORE)
+
+g<-ggplot(result, aes(RESTAURANT, SCORE)) +
+  geom_bar(stat = 'identity',fill="tan2")  +
+  coord_flip()+
+  #theme(text = element_text(size=10), axis.text.x = element_text(angle=45, vjust=1, color = "grey")) +
+  labs(title="Worst 10 Highest Violation Score Restaurant ",x = "", y = "Score")
+
+ggplotly(g,tooltip=c("x", "y"))
+g
+# save the csv for google api
+# csv<-citical_count_score
+# write.csv(csv[1:15,c(1,4,2,3,10)], file = '/Users/Selina/Desktop/Visualization/EDAV-master/chart.csv',row.names = FALSE)
+
+
+```
+
+For the second method, we want to give particular emphasis on the times of violation occurs for a restaurant during one inspection. We take into account of violations that have grade C [with score > 27] and have occurred more than 5 times for a restaurant. In the plot, we find that all of the restaurants have score above 100. In other words, these restaurants have at least 5 violation scored larger than 100 at the same date of inspection! Note that ’Margarita Island' have the highest violation score [151] among all the restaurants.
+
+
+Google chart is a nice API for visualization in javascript, base on the what we learned this semester on d3, we decide to explore this API a bit. Click [here] to see the interactive google chart version of the plot.
+
+
+
+```{r CAFE Mean Violation Score}
+
+
+#### INSPECTION.TYPE Violation related####
+# we focus on instore sanity check of the inspection#
+# dis-regarding rows from initial inspections as grades and scores are not counted
+gradables <- c("Cycle Inspection / Initial Inspection" , "Cycle Inspection / Re-inspection", 
+               "Pre-permit (Operational) / Initial Inspection", "Pre-permit (Operational) / Re-inspection")
+
+inspecttbl1 <- (filter(inspecttbl, `INSPECTION.TYPE` %in% gradables))
+
+
+# critical score and inspection type of chain restaurant
+# store per year average critical score variation
+cafe<-inspecttbl1%>%filter(CUISINE.DESCRIPTION=="CafÃ©/Coffee/Tea")%>%mutate(year = format(INSPECTION.DATE, "%Y"))
+
+STARBUCKS<-cafe[grep("STARBUCKS",cafe$DBA),]%>%group_by(year,BORO)%>%summarise(MEAN = mean(SCORE))
+STARBUCKS$DBA<-"STARBUCKS"
+
+DUNKIN<-cafe[grep("DUNKIN*",cafe$DBA),]%>%group_by(year,BORO)%>%summarise(MEAN = mean(SCORE))
+DUNKIN$DBA<-"DUNKIN"
+
+PICCOLO<-cafe[grep("PICCOLO*",cafe$DBA),]%>%group_by(year,BORO)%>%summarise(MEAN = mean(SCORE))
+PICCOLO$DBA<-"PICCOLO"
+
+GREGORY<-cafe[grep("GREGORY'S COFFEE*",cafe$DBA),]%>%group_by(year,BORO)%>%summarise(MEAN = mean(SCORE))
+GREGORY$DBA<-"GREGORY"
+
+score<-rbind(STARBUCKS,DUNKIN,GREGORY,PICCOLO)
+score_boro<-score%>%filter(BORO=="MANHATTAN"|BORO=="QUEENS"|BORO=="BROOKLYN")
+score_boro$DBA<-as.factor(score_boro$DBA)
+
+csv<-score_boro
+# change to local path
+# write.csv(csv, file = 'YOURPATH',row.names = FALSE)
+write.csv(csv, file = '/Users/Selina/Desktop/Visualization/EDAV-master/boro_mean.csv',row.names = FALSE)
+# csv <- read_csv("YOURPATH")
+csv <- read_csv("/Users/Selina/Desktop/Visualization/EDAV-master/boro_mean.csv")
+
+g<-ggplot(csv, aes(x = year, y = MEAN, fill = DBA)) + 
+  geom_col(position = "dodge") +
+  facet_grid(fct_relevel(score_boro$BORO,"MANHATTAN")~.) +
+  ggtitle("Mean Violation Score") +
+  theme_grey(16)
+g
+ggplotly(g,tooltip=c("x", "y"))
+```
+
+We gather ‘Cafe’ category from all the restaurant types, and want to see the violation score difference among the cafes.
+
+In this section, we want to examine how well those chain restaurants did in food safety.
+As mentioned by Julie, inspection types varies across the record. Again, we eliminated some of the inspections types as they are irrelevant of our goal, such as Trans Fat, Calorie type, Compliance, Special Program, and Administrative violations inspections.
+
+Among all the Cafe, we pick out the 4 chain stores across U.S., including STARBUCKS, DUNKIN, GREGORY, and PICCOLO and evaluate the quality of those chain cafes store in NY. Sine all 4 of them have many local stores in NYC. It is easy to visualize according to the mean violation score of each base on Borough.
+
+
+Among these 4 Cafes, GREGORY and PICCOLO stores are only located in Manhattan. And PICCOLO started to be recorded after 2015.
+Looking at the plot of Manhattan,
+
+1.	we see that from 2015 to 2018, PICCOLO perform the worst and has the highest mean violation score.
+2.	Score of DUNKIN fluctuate from year to year. It has the lowest score 4 at 2014 (less than one half of GREGORY — who had the second lowest score); the mean score jumped to almost 20 at 2017.
+3.	GREGORY have the most consistent scores across year.
+
+For Brooklyn and Queens,
+
+1.	DUNKIN in general has higher violation score in Brooklyn, comparing to STARBUCKS. However, it operated more according to the safety rules and had a lower mean score in QUEENS.
+2.	STARBUCKS’s mean score ranges from 10 to 15 in all three boroughs.
+
+
+```{r STARBUCKS Most Freq Violation}
+# CAFE common violation type
+# edit
+STARBUCKS_type<-inspecttbl1[ grep("STARBUCKS",inspecttbl1$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n()/2431)%>%arrange(desc(vio_freq))
+STARBUCKS_type$DBA<-"STARBUCKS"
+
+interm<-inspecttbl1[ grep("DUNKIN*",inspecttbl1$DBA),]
+interm$DBA<-"DUNKIN"
+DUNKIN_type<-interm%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n()/6004)%>%arrange(desc(vio_freq))
+DUNKIN_type$DBA<-"DUNKIN"
+
+PICCOLO_type<-inspecttbl1[ grep("PICCOLO*",inspecttbl1$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n()/339)%>%arrange(desc(vio_freq))
+PICCOLO_type$DBA<-"PICCOLO"
+
+GREGORY_type<-inspecttbl1[ grep("GREGORY'S COFFEE*",inspecttbl1$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n()/98)%>%arrange(desc(vio_freq))
+GREGORY_type$DBA<-"GREGORY"
+
+type<-rbind(STARBUCKS_type[1:5,], DUNKIN_type[1:5,],PICCOLO_type[1:5,],GREGORY_type[1:5,])
+type$DBA<-factor(type$DBA)
+type<- type%>%rename( ViolationCode = VIOLATION.CODE,frequency=vio_freq)
+g<-ggplot(type, aes(x = ViolationCode, y = frequency)) +
+  geom_col(position = "dodge",fill="tan2") +
+  facet_grid(~ fct_relevel(type$DBA,"STARBUCKS"),scales = 'free')+
+  ggtitle("Most Frequent Violation Code for Cafes") +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
+  theme_grey(16)
+g
+ggplotly(g,tooltip=c("x", "y"))
+
+```
+After seeing how mean violation score of those chain cafe varying according to year and borough, we look at the most frequent violation code for each of them.
+
+10F ‘Non-food contact surface improperly constructed’ appears in Top 5 most frequent violation for every Cafe. It makes sense since it is the most common violation in NYC. Notice that in STARBUCKS, it really stands out from all the violation and count for about 30% of all of STARBUCKS stores records. The result is good, since the violation is relatively trivial comparing to 04 series categories (eg. 04N the evidence of flies etc.) Whereas in DUNKIN and GREGORY, 10F counts for over 15% of the violation records.
+
+In the case of PICCOLO [which have the highest violation score], the top 5 violation only counts very small portions of overall violation.
+
+
+```{r 3CAFE CODE CATEGORICAL}
+# select code c('10F','10B','08A') 
+# 08A vermin
+# 04N flies
+code<-inspecttbl1%>%filter(VIOLATION.CODE=='10F'|VIOLATION.CODE=='10B'|VIOLATION.CODE=='08A')%>%mutate(year = format(INSPECTION.DATE, "%Y"),month = format(INSPECTION.DATE, "%Y"))
+STARBUCKS_type<-code[ grep("STARBUCKS",code$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n())%>%arrange(desc(vio_freq))
+STARBUCKS_type$DBA<-"STARBUCKS"
+
+DUNKIN_type<-code[ grep("DUNKIN*",code$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n())%>%arrange(desc(vio_freq))
+DUNKIN_type$DBA<-"DUNKIN"
+
+PICCOLO_type<-code[ grep("PICCOLO*",code$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n())%>%arrange(desc(vio_freq))
+PICCOLO_type$DBA<-"PICCOLO"
+
+GREGORY_type<-code[ grep("GREGORY'S COFFEE*",code$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n())%>%arrange(desc(vio_freq))
+GREGORY_type$DBA<-"GREGORY"
+
+code<-rbind(STARBUCKS_type[1:5,], DUNKIN_type[1:5,],PICCOLO_type[1:5,],GREGORY_type[1:5,])
+code$DBA<-factor(code$DBA)
+code$DBA<-fct_relevel(code$DBA,"STARBUCKS")
+# code$DBA<-fct_relevel(code$DBA,"PICCOLO", )
+mosaic(VIOLATION.CODE ~ DBA, code, direction = c("v", "h"),labeling= labeling_border(rot_labels = c(15,0,0,0)),main="Violation Code Ratio of Cafes") #gp = gpar(fill = c("blue", "lightblue"),rot_labels=c(0,90,0,0),just_labels="right" )
+
+
+#, labeling= labeling_border(rot_labels = c(0,90,0,0), 
+                                  # just_labels = c("center", 
+                                      #           "center", 
+                                       #          "center", 
+                                       #           "right"))
+```
+We find the 10F[non-food contact surface improperly constructed], 10B[improper sewage disposal system], 08A[Facility not vermin proof and have potential to attract vermin] are the most frequent violation code combination across these 4 stores.
+
+A close look at their distribution by store would be interesting.
+From the plot, we can see that STARBUCKS and DUNKIN has very similar violation ratio distribution, whereas GREGORY have more violation in 10B , and less in 10F  and 08A. PICCOLO has a significant increase in 08A.
+
+
+```{r STARBUCKS}
+# per year/date
+
+yearmonth<-inspecttbl1%>%filter(CUISINE.DESCRIPTION=="CafÃ©/Coffee/Tea")%>%mutate(yearmonth = format(INSPECTION.DATE, "%Y-%m"))
+STARBUCKS<-yearmonth[grep("STARBUCKS",yearmonth$DBA),]%>%group_by(yearmonth)%>%filter(VIOLATION.CODE=="08A")%>%summarise(Score = mean(SCORE))
+STARBUCKS$Date<-as.Date(as.yearmon(STARBUCKS$yearmonth, "%Y-%m"))
+g<-ggplot(STARBUCKS) + geom_line(aes(Date, Score)) +
+  geom_point(aes(Date, Score))+
+    ggtitle("STARBUCKS Violation Score 08A Monthly Mean Score Variation") +
+    labs (x = "Month", y = "Score") +
+    theme_grey(16) +
+    theme(legend.title = element_blank())
+g
+p <- ggplotly(g, tooltip=c("x", "y"))
+p
+```
+
+As Lisa show in the previous section, 10F and 08A are two most frequent violation in NYC. We decided to look at 08A violation particular in STARBUCKS since it represents the dimension we cared about more or more serious in food safety issue of the city - ‘potential presence of vermin (eg. mice).’
+
+The time series plot according to ‘potential vermin presents [08A]’ violation shows the monthly change of score for STARBUCKS the past 5 years. There is a general pattern of decreasing in score across years. And the variation of score also decreases, meaning that all STARBUCKS  in NYC are reaching more and more consistent food safety quality maybe through stricter regularization.
+
+
+```{r STARBUCK BY BORO}
+# analysis of area
+CAFE<-inspecttbl1%>%filter(CUISINE.DESCRIPTION=="CafÃ©/Coffee/Tea")%>%mutate(year = format(INSPECTION.DATE, "%Y"))
+
+STARBUCKS<-CAFE[grep("STARBUCKS",CAFE$DBA),]%>%group_by(BORO,year)%>%filter(VIOLATION.CODE=="08A")%>%summarise(Score = mean(SCORE))
+STARBUCKS<-STARBUCKS%>%filter(year!="2018",year!="2014")
+STARBUCKS$Boro<-reorder(STARBUCKS$BORO,STARBUCKS$Score)
+g<-ggplot(STARBUCKS) +
+  geom_bar(aes(Boro, Score),stat = 'identity',fill="tan2")  +
+  facet_grid(~year)+
+  labs(title="Mean Violation Code 08A By BORO ",x = "NYC Borough", y = "08A Violation Score")+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+g
+ggplotly(g,tooltip=c("x", "y"))
+```
+We are wondering if this violation score is different across different area of NYC as well. The Mean Violation Code By Boro shows the following trend. Since the data in 2014 and 2018 are not recorded full-year around. We take 2015, 2016, 2017 to analysis the overall trend.
+
+1.	Potential presence of vermin were consistent across boroughs in 2015. Score is about 15.
+2.	STARBUCKS in Bronx improved the quality in this area and become the best across NYC for 2016 and 2017.
+3.	A large portion of the STARBUCKS are located at Manhattan, comparing to where else. Those STARBUCKS did okay not the best in keeping restaurant tidy but not the worst either.
+4.	BROOKLYN STARBUCKS seemed to be the ones that have the worst condition across all three years.

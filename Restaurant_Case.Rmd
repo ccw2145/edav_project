@@ -21,7 +21,7 @@ load('~/EDAV/data/data_s.RData')
 #glimpse(inspecttbl)
 ```
 
-```{r resturant}
+```{r preprocessing, include= FALSE}
 #####Date######
 inspecttbl$"INSPECTION.DATE"<-(as.Date(inspecttbl$'INSPECTION.DATE', "%m/%d/%Y"))
 inspecttbl$"GRADE.DATE"<-(as.Date(inspecttbl$'GRADE.DATE', "%m/%d/%Y"))
@@ -40,7 +40,7 @@ inspecttbl$SCORE <- as.numeric(inspecttbl$SCORE)
 n_distinct(inspecttbl$CAMIS)
 # Data Cleaning -- remove inspection 1900 
 inspecttbl<-filter(inspecttbl, `INSPECTION.DATE` != "1900-01-01")
-range(inspecttbl$`INSPECTION.DATE`)
+#range(inspecttbl$`INSPECTION.DATE`)
 
 #### INSPECTION.TYPE Violation related####
 # we focus on instore sanity check of the inspection#
@@ -64,7 +64,9 @@ nrow(filter(inspecttbl1, GRADE %in% grades))
 shrunkenData <- (distinct(select(inspecttbl1, CAMIS, DBA, BORO, BUILDING, STREET, ZIPCODE, `CUISINE.DESCRIPTION`, `INSPECTION.DATE`, ACTION, SCORE, GRADE, `INSPECTION.TYPE`)))
 
 shrunkenData$`INSPECTION.DATE`[1:20]
+```
 
+```{r  resturant}
 print(worstOfList <- arrange(filter(shrunkenData, GRADE %in% grades), desc(SCORE))[1:20,c(2,10)])
 arrange(filter(shrunkenData, GRADE %in% grades), desc(SCORE))[1:20,c(2,10)] # select cols and rows # particular rest violate the most
 
@@ -137,7 +139,7 @@ Chain Restuarant
 # we focus on instore sanity check of the inspection#
 
 #extra levels(as.factor(inspecttbl1$CUISINE.DESCRIPTION))
-inspecttbl
+
 inspecttbl%>%filter(DBA =="STARBUCKS")
 # dis-regarding rows from initial inspections as grades and scores are not counted
 STARBUCKS<-inspecttbl%>%filter(DBA=="STARBUCKS", GRADE!='A', INSPECTION.TYPE!='Cycle Inspection / Initial Inspection', CRITICAL.FLAG=='Critical')
@@ -152,7 +154,7 @@ cafe<-inspecttbl1%>%filter(CUISINE.DESCRIPTION=="CafÃ©/Coffee/Tea")%>%mutate(y
 
 STARBUCKS<-cafe[grep("STARBUCKS",cafe$DBA),]%>%group_by(year,BORO)%>%summarise(MEAN = mean(SCORE))
 STARBUCKS$DBA<-"STARBUCKS"
-STARBUCKS
+
 DUNKIN<-cafe[grep("DUNKIN*",cafe$DBA),]%>%group_by(year,BORO)%>%summarise(MEAN = mean(SCORE))
 DUNKIN$DBA<-"DUNKIN"
 
@@ -250,7 +252,7 @@ mosaic(VIOLATION.CODE ~ DBA, code, direction = c("v", "h"),labeling= labeling_bo
 CAFE<-inspecttbl1%>%filter(CUISINE.DESCRIPTION=="CafÃ©/Coffee/Tea")%>%mutate(year = format(INSPECTION.DATE, "%Y"),month = format(INSPECTION.DATE, "%m"))
 STARBUCKS<-CAFE[grep("STARBUCKS",CAFE$DBA),]%>%group_by(year,month)%>%summarise(MEAN = mean(SCORE))
 STARBUCKS<-STARBUCKS%>%filter(year!="2018",year!="2014")
-STARBUCKS
+#STARBUCKS
 
 ######TRY QUaRTERly SCORE # group by quater of the year
 ggplot(STARBUCKS, aes(as.numeric(month), MEAN)) + geom_line() +#color = symbol
@@ -264,7 +266,7 @@ ggplot(STARBUCKS, aes(as.numeric(month), MEAN)) + geom_line() +#color = symbol
 # select 08A meanscore with date
 STARBUCKS<-CAFE[grep("STARBUCKS",CAFE$DBA),]%>%group_by(year,month)%>%filter(VIOLATION.CODE=="08A")%>%summarise(SCORE08A = mean(SCORE))
 STARBUCKS<-STARBUCKS%>%filter(year!="2018",year!="2014")
-STARBUCKS
+#STARBUCKS
 
 ggplot(STARBUCKS, aes(as.numeric(month), SCORE08A)) + geom_line() +
     ggtitle("STARBUCKS VIOLATION SCORE") +

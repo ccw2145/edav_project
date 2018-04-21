@@ -4,7 +4,7 @@ subtitle: |
   NYC Restaurant Inspection
   
 author: "Cindy Wu, Selina Tang, Lisa Kim, Julie Yu"
-date: "`r format(Sys.time(), '%d %B %Y')`"
+date: "`r format(Sys.time(), '%B %d %Y')`"
 output:
   html_document:
     theme: paper
@@ -24,18 +24,16 @@ font-size: 12pt;
 }
 </style>
 ## Introduction
-(Explain why you chose this topic, and the questions you are interested in studying.
-List team members and a description of how each contributed to the project.)
 
 NYC is a hub of diversity, yet there is one similarity that 8.5 million people shares – everyone eats. Over 26,000 eating establishments in the city (according to the NYC Department of Health and Mental Hygiene or DOHMH) thrives here because New Yorkers dine out over 58% of their lunches or dinners and spend $46.14 on average for each meal per person (Zagat Dining Trends Survey 2018). For these customers, ourselves included, the food that we purchase so frequently and at such high costs is a major factor influencing our health. To help people stay informed about food safety and the potential health risks that eating out poses, we conducted our research about restaurants in NYC based on DOHMH's source data hosted on Open Data.
 
 
-* Team Members: Cindy Wu, Selina Tang, Lisa Kim, Julie Yu
+$Team$ $Members:$ Cindy Wu, Julie Yu, Lisa Kim, Selina Tang
 
-Cindy- data description, data quality, time series visualization
-Selina- restaurant case
-Lisa- violation distribution and analysis
-Julie-
+Cindy- data description, data quality, time series overview  
+Julie- grade distributions and analysis  
+Lisa- violation distributions and analysis  
+Selina- restaurants case by case  
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 ### Packages and Libraries
@@ -171,13 +169,11 @@ p2
 Each borough has very similar percentage in missing  values so it is fair to conclude that the data qulity of our dataset is identical across the city.
 
 ## Exploratory Data Analysis
-(Provide a detailed, well-organized description of your findings, including textual description, graphs, and code.  Your focus should be on both the results and the process. Include, as reasonable and relevant, approaches that didn't work, challenges, the data cleaning process, etc.)
 
-### Average Score by time
-
-The following time series plot shows the change in quarter average score for the past five year. There is a clear pattern that the third quarter (Jul - Sept) has the highest average score each year. Thinking in terms of season and weather, since July, August and September are typically the hottest months in NYC, we can infer that there are more violations during the summer. 
+The following time series plot gives a general overview of NYC restaurant cleanliness over the past five year. 
 
 ```{r time series, eval = TRUE, fig.show='hold', out.width='70%', message=FALSE, warning=FALSE}
+df <- df[!duplicated(df[c('DBA', 'INSPECTION.DATE', 'GRADE')]),]
 df$INSPECTION.DATE <- as.Date(as.character(df$INSPECTION.DATE),format="%m/%d/%Y")
 ts <- xts(df$SCORE,df$INSPECTION.DATE)
 quarterly <- apply.quarterly(ts, FUN =mean)
@@ -190,10 +186,12 @@ p<-plot_ly(quarterly_df[quarterly_df$date> "2013-05-16" & quarterly_df$date < "2
         mode = 'lines+markers',
         hoverinfo = 'text',
         text = ~paste("Quarter Date:",date,"<br> Average Score: ",round(quarter_avg)))%>%
-  add_trace(x = ~date,y = ~quarter_avg, mode = 'markers',color=I("hotpink"),marker = list(size = 8))%>%
+  add_trace(x = ~date,y = ~quarter_avg, mode = 'markers',color=I("orange"),marker = list(size = 8))%>%
         layout(title = "Quarter Average Score",showlegend = FALSE)
 p
 ```
+
+There is a clear pattern that the third quarter (Jul - Sept) has the highest average score each year. Thinking in terms of season and weather, since July, August and September are typically the hottest months in NYC, we can infer that there are more violations during the summer. In the next sections, we go into more details about inspection results and look for more interesting patterns from two main perspectives- grade and violations. 
 
 ```{r, eval= FALSE, echo = FALSE}
 plot_ly(ts_df) %>%
@@ -208,22 +206,23 @@ quarterly_df$year <- factor(year(quarterly_df$date))
 
 aggregate(. ~yearmon(date),ts ,mean)
 ```
+
+### Grades
+```{r,child="final project.Rmd"}
+```
+
 In the following sections, we will dive deeper into different violations, scores, and some of our most frequented restaurants.
 
 ### Violations 
 ```{r,child="violation_code_count.Rmd"}
 ```
 
-### Restaurant by case
-```{r,child="Restaurant_Case.Rmd"}
+### Restaurants by case
+```{r,child="Restaurant_Case_ver2.Rmd"}
 ```
 
 ## Executive Summary
 (Provide a short nontechnical summary of the most revealing findings of your analysis  written for a nontechnical audience. The length should be approximately two pages (if we were using pages...) Take extra care to clean up your graphs, ensuring that best practices for presentation are followed.)
-
-## Interactive Component 
-```{r,eval = TRUE, fig.width=12, fig.height=4, fig.align='center', message=FALSE, warning=FALSE}
-```
 
 
 ## Conclusion

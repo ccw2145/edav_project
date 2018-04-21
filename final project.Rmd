@@ -7,14 +7,20 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+* Missing Grades *
 
-** Missing Grades **
-
-```{r}
+```{r, echo=FALSE, include =FALSE}
 # pre-processing
-data = read.csv("/Users/shihhuayu/Downloads/DOHMH_New_York_City_Restaurant_Inspection_Results.csv", header = TRUE)
+#data = read.csv("/Users/shihhuayu/Downloads/DOHMH_New_York_City_Restaurant_Inspection_Results.csv", header = TRUE)
+load('~/EDAV/data/data.RData')
 library(tidyverse)
+library(gridExtra)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(tidyverse)
+library(kableExtra)
+
 keep_cols <- c('DBA', 'BORO', 'ZIPCODE','CUISINE.DESCRIPTION','INSPECTION.DATE','VIOLATION.CODE','SCORE', 'GRADE','INSPECTION.TYPE','GRADE.DATE')
 df <- data %>% select(keep_cols)
 
@@ -47,7 +53,7 @@ We first looked at the distribution of grades for A, B, and C and excluding miss
 ggplot(filter(df,grade=='A'|grade=='B'|grade=='C'), aes(x=grade)) + geom_bar() + labs(title="Restaurant Grades")
 ```
 
-We then looked at how many missing values there are in grades.
+We then looked at how many missing values there are in grades after eliminating all the duplicated entries.
 ```{r}
 skimr::skim(df$grade)
 ```
@@ -73,7 +79,6 @@ df$imp_grade <- sapply(df$score, convert_to_grade)
 We're now interested in whether there is a difference in the grade distribution between simply looking at grades given by NYC DOHMH as they are and grades that include information of initial inspections.
 
 ```{r}
-library(gridExtra)
 p1 <- ggplot(filter(df,grade=='A'|grade=='B'|grade=='C'), aes(x=grade)) + geom_bar() + labs(title="Restaurant Grades")
 p2 <- ggplot(filter(df,(imp_grade=='A'|imp_grade=='B'|imp_grade=='C')&(inspection_type=="Cycle Inspection / Initial Inspection" | inspection_type== "Pre-permit (Operational) / Initial Inspection")), aes(x=imp_grade)) + geom_bar() + labs(title="Restaurant Grades at Initial Inspections",x="grade")
 grid.arrange(p1, p2, nrow = 1)
@@ -125,6 +130,7 @@ df6$inspection <- c("re")
 colnames(df6) <- c("grade","Freq","imputation","inspection")
 #summarise(re_insp_df,sum(Freq))
 ```
+
 ```{r, fig.width = 10,fig.height = 10}
 df7 <- rbind(df1,df2,df3,df4,df5,df6)
 df7 <- droplevels(df7)
@@ -141,8 +147,6 @@ Note that when fixing inspection=re, there is slight difference before and after
 We now shift our focus to examining if certain types of restaurants are cleaner and healthier than ther others. Since New York City requires restaurant to post their grades and the customers are often more familiar with this grading system, we decided to look at grades instead of scores. Above are tables showing top 20 restaurant types with the highest percentage of receiving an A (count of A's/total counts of A+B+C within its own category) and a C. And for this study, we decided to use grades from both initial insepctions and re-inspections excluding missing grades since these are the actual grades the restaurants will post.
 
 ```{r}
-library(dplyr)
-library(ggplot2)
 df_cuisine <- df[,c('name','cuisine','grade')]
 
 df_cuisine <- df_cuisine %>% filter(grade=='A'|grade=='B'|grade=='C')
@@ -157,13 +161,12 @@ df_cuisine <- df_cuisine %>% group_by(cuisine) %>% mutate(percentage_B=count_B/t
 
 df_cuisine <- df_cuisine %>% group_by(cuisine) %>% mutate(percentage_C=count_C/total_count)
 
-library(knitr)
+
 kable(arrange(df_cuisine, desc(`percentage_A`))[1:20,],caption = "Top 20 A Percentages")
 kable(arrange(df_cuisine, desc(`percentage_C`))[1:20,],caption = "Top 20 C Percentages")
 ```
 
 ```{r}
-library(tidyverse)
 tidyv_cuisine <- df_cuisine[,c('cuisine','percentage_A','percentage_B','percentage_C','total_count')]
 tidyv_cuisine <- tidyv_cuisine %>% rename(A = percentage_A,B = percentage_B,C = percentage_C)
 

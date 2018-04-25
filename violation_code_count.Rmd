@@ -22,8 +22,6 @@ df <- filter(df,!is.na(SCORE))
 df <-filter(df, `INSPECTION.DATE` != "1900-01-01")
 df$"INSPECTION.DATE"<-(as.Date(df$'INSPECTION.DATE', "%m/%d/%Y"))
 
-nrow(df)
-
 colnames(df) <- c("name", "boro", "zipcode", "cuisine", "inspection_date", 
                   "violation_code", "score", "grade",
                   "inspection_type")
@@ -215,26 +213,8 @@ violation_code_with_restype("Latin (Cuban, Dominican, Puerto Rican, South & Cent
 
 The bar chart of the violation codes for Latin restaurants looks almost the same as other three types of restaurants. The violation associated with the evidence of mice or live mice present in facility's food and/or non-food areas have frequently made. For cafes, the regulation associated with living mice is less freuquently violated compared to other restaurant types. Latin restaurants have the issue of roaches as well. The Cafes tend to violate the code associated with sanitizing utensils and washing food contact surface more often. Though, compared to the overall (containing all the restaurants) frequency of the violation codes, the code associated with the mice one is ranked lower for these types of restaurants.
 
-Also, we decide to study the association between the violation codes and the years. We still focus on the 5 most common restaurants to keep it simple and more interpretable. In order to produce a plot for each year, we take the same steps as described above except that we create new columns called year and month which extract year and month information from inspection date using mutate function.
-
-Additional note: we decide to focus on 08A, 06D, 04L, and 06C only. While including all the violation codes provide more information about what overall violation trends across the year, this can make the graph more complicated and hard to look at. So, to make it simple and more readable, we choose 08A, 06D, 04L, and 06C as our x variable to see if there are any trends in these violation types. Again, because we are most interested in the shape of the distribution for each type of restaurant and each year, we set the scale to free to prevent some of the graphs from shrinking towards 0.
-
-```{r}
-violation_type <- c("08A", "06D", "04L", "06C")
-top5_year <- top5 %>% filter(violation_code %in% violation_type) %>% mutate(year = factor(format(inspection_date, "%Y")), month = factor(format(inspection_date, "%m"))) %>% select(cuisine, year, violation_code) %>% group_by(cuisine, year, violation_code) %>% summarise(count = n())
-
-
-ggplot(top5_year, aes(x = violation_code, y = count, fill = year)) +
-  geom_col(position = "dodge") +
-  facet_grid(cuisine~., scale = "free") +
-  ggtitle("Trends in frequency of violation types") +
-  theme_grey(16)
-```
-
-One noticeable feature from this graph is that there are not much data in 2013. In fact, it is also shown in the dataframe that the frequency of any violation types for 2013 is less than 10. The frequency of 08A is highest in the year of 2017 for American, Cafe, Chinese, and Italian. Only the plot of Latin restaurants has the highest frequency of 08A in 2015. There is increasing pattern in any violation code for Chinese restaurants and Cafe. All of the violation codes reach a peak in 2017. It then decreases significantly in 2018, but it would probably be because the inspections has not finished yet for 2018. While there is an increasing pattern in 04L, 06D, and 08A for Italian and American restaurants, it seems like the frequency of the violations of 06C (Food not protected from potential source of contamination during storage, preparation, transportation, display or service) has decreased after 2016. For Latin restaurants, the frequency of all four type of violations increase at 2015 and then decrease after 2016. Also, the Latin restaurants are the only one which has a decreasing trend in 04L that is associated with mice. 
-
-
-```{r}
+**Interactive Visualization**
+```{r,message=FALSE, warning=FALSE}
 violation_code_restype <- function(df, x){
   new_df <- df %>% filter(cuisine == x) %>% select(violation_code) %>% group_by(violation_code) %>%
     summarize(count = n()) %>% arrange(-count) %>% top_n(10)
@@ -242,7 +222,6 @@ violation_code_restype <- function(df, x){
   return(new_df)
   
 }
-
 american <- df %>% violation_code_restype("American") %>% arrange(count)
 italian <- df %>% violation_code_restype("Italian") %>% arrange(count)
 chinese <- df %>% violation_code_restype("Chinese") %>% arrange(count)
@@ -284,3 +263,22 @@ p <- plot_ly(type = 'bar', orientation = 'h') %>%
 
 p
 ```
+
+Also, we decide to study the association between the violation codes and the years. We still focus on the 5 most common restaurants to keep it simple and more interpretable. In order to produce a plot for each year, we take the same steps as described above except that we create new columns called year and month which extract year and month information from inspection date using mutate function.
+
+Additional note: we decide to focus on 08A, 06D, 04L, and 06C only. While including all the violation codes provide more information about what overall violation trends across the year, this can make the graph more complicated and hard to look at. So, to make it simple and more readable, we choose 08A, 06D, 04L, and 06C as our x variable to see if there are any trends in these violation types. Again, because we are most interested in the shape of the distribution for each type of restaurant and each year, we set the scale to free to prevent some of the graphs from shrinking towards 0.
+
+```{r}
+violation_type <- c("08A", "06D", "04L", "06C")
+top5_year <- top5 %>% filter(violation_code %in% violation_type) %>% mutate(year = factor(format(inspection_date, "%Y")), month = factor(format(inspection_date, "%m"))) %>% select(cuisine, year, violation_code) %>% group_by(cuisine, year, violation_code) %>% summarise(count = n())
+
+
+ggplot(top5_year, aes(x = violation_code, y = count, fill = year)) +
+  geom_col(position = "dodge") +
+  facet_grid(cuisine~., scale = "free") +
+  ggtitle("Trends in frequency of violation types") +
+  theme_grey(16)
+```
+
+One noticeable feature from this graph is that there are not much data in 2013. In fact, it is also shown in the dataframe that the frequency of any violation types for 2013 is less than 10. The frequency of 08A is highest in the year of 2017 for American, Cafe, Chinese, and Italian. Only the plot of Latin restaurants has the highest frequency of 08A in 2015. There is increasing pattern in any violation code for Chinese restaurants and Cafe. All of the violation codes reach a peak in 2017. It then decreases significantly in 2018, but it would probably be because the inspections has not finished yet for 2018. While there is an increasing pattern in 04L, 06D, and 08A for Italian and American restaurants, it seems like the frequency of the violations of 06C (Food not protected from potential source of contamination during storage, preparation, transportation, display or service) has decreased after 2016. For Latin restaurants, the frequency of all four type of violations increase at 2015 and then decrease after 2016. Also, the Latin restaurants are the only one which has a decreasing trend in 04L that is associated with mice. 
+

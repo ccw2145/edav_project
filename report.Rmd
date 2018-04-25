@@ -207,17 +207,17 @@ aggregate(. ~yearmon(date),ts ,mean)
 ```
 
 ### Grades
-```{r,child="final project.Rmd"}
+```{r,child="final project.Rmd",message=FALSE, warning=FALSE}
 ```
 
 In the following sections, we will dive deeper into different violations, scores, and some of our most frequented restaurants.
 
 ### Violations 
-```{r,child="violation_code_count.Rmd"}
+```{r,child="violation_code_count.Rmd",,message=FALSE, warning=FALSE}
 ```
 
 ### Restaurants by case
-```{r,child="Restaurant_Case_ver2.Rmd"}
+```{r,child="Restaurant_Case_ver2.Rmd",message=FALSE, warning=FALSE}
 ```
 
 ## Executive Summary

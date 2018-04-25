@@ -175,7 +175,7 @@ tidyv_cuisine <- tidyv_cuisine %>% rename(A = percentage_A,B = percentage_B,C = 
 tidyv_cuisine_top_counts <- arrange(tidyv_cuisine, desc(`total_count`))[1:20,]
 
 tidyv_cuisine_top_counts$cuisine <- factor(tidyv_cuisine_top_counts$cuisine,
-                                   levels=tidyv_cuisine_top_counts$cuisine[order(-tidyv_cuisine_top_counts$A)])
+                                   levels=tidyv_cuisine_top_counts$cuisine[order(tidyv_cuisine_top_counts$A)])
 
 levels(tidyv_cuisine_top_counts$cuisine)[levels(tidyv_cuisine_top_counts$cuisine)=="Latin (Cuban, Dominican, Puerto Rican, South & Central American)"] <- "Latin" # for better display
 
@@ -184,14 +184,14 @@ tidyv_cuisine_top_counts <- tidyv_cuisine_top_counts %>% gather(key=GradeType,va
 tidyv_cuisine_top_A <- arrange(tidyv_cuisine, desc(`A`))[1:20,]
 
 tidyv_cuisine_top_A$cuisine <- factor(tidyv_cuisine_top_A$cuisine,
-                              levels=tidyv_cuisine_top_A$cuisine[order(-tidyv_cuisine_top_A$A)])
+                              levels=tidyv_cuisine_top_A$cuisine[order(tidyv_cuisine_top_A$A)])
 
 tidyv_cuisine_top_A <- tidyv_cuisine_top_A %>% gather(key=GradeType,value=Percentage,-cuisine,-total_count)
 
 tidyv_cuisine_top_C <- arrange(tidyv_cuisine, desc(`C`))[1:20,]
 
 tidyv_cuisine_top_C$cuisine  <- factor(tidyv_cuisine_top_C$cuisine,
-                              levels=tidyv_cuisine_top_C$cuisine[order(-tidyv_cuisine_top_C$C)])
+                              levels=tidyv_cuisine_top_C$cuisine[order(tidyv_cuisine_top_C$C)])
 
 levels(tidyv_cuisine_top_C$cuisine)[levels(tidyv_cuisine_top_C$cuisine)=="Latin (Cuban, Dominican, Puerto Rican, South & Central American)"] <- "Latin"
 

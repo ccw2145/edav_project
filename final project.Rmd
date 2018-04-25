@@ -153,6 +153,8 @@ df_cuisine <- df_cuisine %>% filter(grade=='A'|grade=='B'|grade=='C')
 
 df_cuisine <- df_cuisine %>% group_by(cuisine) %>% summarise(count_A=sum(grade == "A", na.rm = T),count_B=sum(grade == "B", na.rm = T),count_C=sum(grade == "C", na.rm = T))
 
+levels(df_cuisine$cuisine)[levels(df_cuisine$cuisine)=="CafÃ©/Coffee/Tea"] <- "Cafe/Coffee/Tea" #for better display
+
 df_cuisine <- df_cuisine %>% group_by(cuisine) %>% mutate(total_count=count_A+count_B+count_C)
 
 df_cuisine <- df_cuisine %>% group_by(cuisine) %>% mutate(percentage_A=count_A/total_count)

@@ -224,8 +224,7 @@ In the following sections, we will dive deeper into different violations, scores
 
 
 ## Conclusion
-
-
+This report explores NYC restaurant inspection results specifically focusing on grades and violations. The overall scores reamin similar in trends over the years and summer months tend to raise more violations. By visualizing grade distrubutions, we find the general pattern that European and American restaurants have better grades than Asian restaurants.From violation distributions, we learn that many restaurants are penalized for not storing food properly and not maintaning the space clean. 
 
 
 [data]: https://data.cityofnewyork.us/Health/DOHMH-New-York-City-Restaurant-Inspection-Results/xx67-kt59?category=Health&view_name=DOHMH-New-York-City-Restaurant-Inspection-Results

@@ -3,13 +3,6 @@ title: "Preprocessing"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-## R Markdown
-
-
 ```{r load data, include = FALSE}
 library(vcd)
 library(tidyverse)
@@ -69,7 +62,7 @@ Combining the cuisine descriptions
 df$cuisine <- factor(df$cuisine)
 levels(df$cuisine) <- sub("Pizza/Italian", "Italian", levels(df$cuisine))
 levels(df$cuisine) <- sub("Pizza", "Italian", levels(df$cuisine))
-levels(df$cuisine) <- sub("CafÃ©/Coffee/Tea", "Cafe", levels(df$cuisine))
+levels(df$cuisine) <- sub("CafÃ\u0083Â©/Coffee/Tea", "Cafe", levels(df$cuisine))
 levels(df$cuisine) <- sub("Fruits/Vegetables", "Salads",levels(df$cuisine))
 levels(df$cuisine) <- sub("Hotdogs/Pretzels", "Hotdogs", levels(df$cuisine))
 levels(df$cuisine) <- sub("Ice Cream, Gelato, Yogurt, Ices", "Dessert", levels(df$cuisine))
@@ -181,8 +174,6 @@ violation_code_with_restype <- function(x){
   
   ggplot(new_df, aes(reorder(violation_code, count), count)) + geom_col() + coord_flip() +
     labs(title = paste("Distribution of violation code of", x, "restaurants", sep = " "), x = "violation code")
-  
-  
 }
 ```
 

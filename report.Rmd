@@ -27,6 +27,7 @@ font-size: 12pt;
 
 NYC is a hub of diversity, yet there is one similarity that 8.5 million people shares – everyone eats. Over 26,000 eating establishments in the city (according to the NYC Department of Health and Mental Hygiene or DOHMH) thrives here because New Yorkers dine out over 58% of their lunches or dinners and spend $46.14 on average for each meal per person (Zagat Dining Trends Survey 2018). For these customers, ourselves included, the food that we purchase so frequently and at such high costs is a major factor influencing our health. To help people stay informed about food safety and the potential health risks that eating out poses, we conducted our research about restaurants in NYC based on DOHMH's source data hosted on Open Data.
 
+For better interactivity, we used plotly for most of our graphs and include a d3 visualization for missing data. 
 
 $Team$ $Members:$ Cindy Wu, Julie Yu, Lisa Kim, Selina Tang
 
@@ -86,7 +87,7 @@ length(unique(na.omit(df$A)))
 
 ### Overview: Missing Data and data cleaning
 
-click [here][d3] to see interactive visna plots made with D3
+**click [here][d3] to see interactive visna plots made with D3**
 
 We first explore the distribution of missing data in the original dataset. As shown in the chart and plot, the most common missing pattern in the original data is Grade on its own with over 50% missing data, followed by only around 5% in scores and minor missing percentages in violation details. 
 
@@ -214,7 +215,7 @@ aggregate(. ~yearmon(date),ts ,mean)
 In the following sections, we will dive deeper into different violations, scores, and some of our most frequented restaurants.
 
 ### Violations 
-```{r,child="violation_code_count.Rmd"}
+```{r,child="violation_code_count_ver2.Rmd"}
 ```
 
 ### Restaurants by case
@@ -222,7 +223,6 @@ In the following sections, we will dive deeper into different violations, scores
 ```
 
 ## Executive Summary
-(Provide a short nontechnical summary of the most revealing findings of your analysis  written for a nontechnical audience. The length should be approximately two pages (if we were using pages...) Take extra care to clean up your graphs, ensuring that best practices for presentation are followed.)
 
 
 ## Conclusion

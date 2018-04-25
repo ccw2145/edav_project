@@ -3,14 +3,23 @@ title: "Preprocessing"
 output: html_document
 ---
 
-
-```{r load data, include=FALSE}
-library(vcd)
-library(tidyverse)
-load('~/EDAV/data/data.RData')
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r Data Cleaning, echo = FALSE}
+## R Markdown
+
+
+```{r load data}
+library(vcd)
+library(tidyverse)
+
+setwd('/Users/lisakim/Desktop/EDAV Final/')
+data <- read.csv("Restaurants.csv", header = T, sep=',', na.strings=c("NA","N/A",""), colClasses = "character")
+names(data)
+```
+
+```{r Data Cleaning}
 keep_cols <- c('DBA', 'BORO', 'ZIPCODE','CUISINE.DESCRIPTION','INSPECTION.DATE','VIOLATION.CODE','SCORE', 'GRADE','INSPECTION.TYPE')
 df <- data%>% select(keep_cols)
 
@@ -47,16 +56,18 @@ convert_to_grade <- function(x){
     return("B")
   }
 }
+
 grade <- sapply(df$score, convert_to_grade)
 df$grade <- grade
 ```
+
 
 Combining the cuisine descriptions
 ```{r More Datapreprocessing}
 df$cuisine <- factor(df$cuisine)
 levels(df$cuisine) <- sub("Pizza/Italian", "Italian", levels(df$cuisine))
 levels(df$cuisine) <- sub("Pizza", "Italian", levels(df$cuisine))
-levels(df$cuisine) <- sub("CafÃ©/Coffee/Tea", "Dessert", levels(df$cuisine))
+levels(df$cuisine) <- sub("CafÃ©/Coffee/Tea", "Cafe", levels(df$cuisine))
 levels(df$cuisine) <- sub("Fruits/Vegetables", "Salads",levels(df$cuisine))
 levels(df$cuisine) <- sub("Hotdogs/Pretzels", "Hotdogs", levels(df$cuisine))
 levels(df$cuisine) <- sub("Ice Cream, Gelato, Yogurt, Ices", "Dessert", levels(df$cuisine))
@@ -71,7 +82,7 @@ levels(df$cuisine) <- sub("Soups & Sandwiches", "Sandwiches", levels(df$cuisine)
 
 ```
 
-Because some of the restaurant types are too specific, we decide to combine some of the categories to make it more simple and interpretable. As a result, all the restaurants with restaurant types that include word Pizza are categorized as Italian restaurants; all the cafes, stores that sell ice cream, drinks are categorized as Dessert; the restaurants with the restaurant type of not listed/not applicable are categorized as others, etc.
+Because some of the restaurant types are too specific and contain special characters, we decide to combine some of the categories to make it more simple and interpretable. As a result, all the restaurants with restaurant types that include word Pizza are categorized as Italian restaurants; The stores that sell ice cream, drinks are categorized as Cafe; CafÃ©/Coffee/Tea is replaced with care. The restaurants with the restaurant type of not listed/not applicable are categorized as others, etc.
 
 
 ```{r Distribution of scores}
@@ -82,7 +93,7 @@ ggplot(df, aes(score)) + geom_histogram(binwidth = 5, boundary = 0, color = "bla
   facet_grid(boro~., scale = "free")
 ```
 
-The plot shown above describes the overall pattern of the scores. It is shown that the distribution of scores is skewed to the right. While it does not look reasonable to have a negative score, some of the restaurants receive the negative score (This is why the histogram doesn't start from 0). The scores that the restaurants mostly received for any type of violations are between 10 to 20. Also, there exist quite a lot of restaurants that receive a score higher than 25 for any type of violations. Because the score above 25 is associated with grade C, which is bad, we could probably consider such restaurants as not cleaned and not well maintained.
+The plot shown above describes the overall pattern of the scores. It is shown that the distribution of scores is skewed to the right. While it sounds more reasonable that the scores should be non-negative, some of the restaurants receive negative score, causing the histogram to start at negative values. The scores that the restaurants mostly received for any type of violations are between 10 to 20. Also, there exist quite a lot of restaurants that receive a score higher than 25 for any type of violations. Because the score above 25 is associated with grade C, which is bad, we could probably consider such restaurants as not cleaned and not well maintained.
 
 Also, we plot the distribution of scores based on boroughs to explore the relationship between borough and scores. Because we are interested in the distribution for each borough, we set the scale to free to make sure the distributions for some boroughs do not shrink. While there is a slight change in the distribution of scores across boroughs, they are all highly skewed to the right, and the shape of the distributions looks almost the same. This shows that there is no or little relationship between the boroughs and the scores. 
 
@@ -124,7 +135,8 @@ ggplot(top5res, aes(reorder(cuisine, total_num), total_num)) + geom_col() + coor
   labs(title = "Number of restaurants", x = "Cuisine")
 ```
 
-The bar chart shows the number of restaurants for each restaurant type. Because there are more than 50 restaurant types in this data, we decide to focus on 5 most common restaurant types. The top 5 restaurant types are following: American, Italian, Chinese, Dessert, and Latin. As shown in the plot above, the most common restaurant type is American (5310), followed by Italian (2224) and Chinese (2088). 
+The bar chart shows the number of restaurants for each restaurant type. Because there are more than 50 restaurant types in this data, we decide to focus on 5 most common restaurant types. The top 5 restaurant types are following: American, Italian, Chinese, Cafe, and Latin. As shown in the plot above, the most common restaurant type is American (5310), followed by Italian (2224) and Chinese (2088). 
+
 
 ```{r}
 # getting the information associated with 5 most common restaurant types
@@ -150,7 +162,7 @@ ggplot(violations_10mostcommon, aes(reorder(violation_code, count), count)) + ge
 ```
 
 We only focus on the restaurants from 5 most common restaurant types to explore what type of violations the restaurants made the most. The above plot shows 10 most common violations made by these restaurants.
-The violation code that was most frequently appeared is 10F, which is 'Non-food contact surface improperly constructed. Unacceptable material used' While this violation does not sound very critical, 04L is associated with mice, which sounds more serious and critical. Out of 93 violations, this one has ranked at top 7 and is violated 4473 times. Because the above plot indicates the overall frequency of violations, we decide to explore the frequency of the violation codes for specific restaurant type. Again, as discussed above, we focus only on the violations made by restaurants from 5 most common restaurant types.
+The violation code that most frequently appears is 10F, which is 'Non-food contact surface improperly constructed. Unacceptable material used' While this violation does not sound very critical, 04L is associated with mice, which sounds more serious and critical. Out of 93 violations, this one has ranked at top 4 and is violated 13788 times. Because the above plot indicates the overall frequency of violations, we decide to explore the frequency of the violation codes for specific restaurant type. Again, as discussed above, we focus only on the violations made by restaurants from 5 most common restaurant types.
 
 
 ```{r function that creates a bar chart and a dataframe}
@@ -167,7 +179,15 @@ violation_code_with_restype <- function(x){
   
   ggplot(new_df, aes(reorder(violation_code, count), count)) + geom_col() + coord_flip() +
     labs(title = paste("Distribution of violation code of", x, "restaurants", sep = " "), x = "violation code")
+  
+  
 }
+```
+
+
+```{r}
+violation_code_with_restype("American")
+
 ```
 
 We first focus on the violation types that American restaurants made. In order to produce a bar chart of 10 most common violation made by these restaurants, the steps we take are following: 
@@ -176,11 +196,12 @@ We first focus on the violation types that American restaurants made. In order t
 3. we arrange the dataframe by the number of the occurrence and then extract top 10 violation codes to produce a bar chart
 The following steps are used to draw a plot for any restaurant type described below.
 
-While the frequency of the violation code changes (because we are only looking at one specific type of the restaurants), the most commonly violated violation types stay almost the same. The 4 most common violation types are same as the plot shown before this one. Though, these restaurants seem to violate 02G, which associates with the storing cold food item above 41 Farenheit, more often than 10B, which associates with not properly installing or maintaining plumbing. Also, they tend to violate the rule associated with storing and maintaining foods as their 10 most violated code is 'Raw, cooked or prepared food is adulterated, contaminated, cross-contaminated, or not discarded in accordance with HACCP plan'
+While the frequency of the violation code changes (because we are only looking at one specific type of the restaurants), the most commonly violated violation types stay almost the same. The 4 most common violation types are same as the plot shown before this one. Though, these restaurants seem to violate 02G, which associates with the storing cold food item above 41 Farenheit, more often than 10B, which associates with not properly installing or maintaining plumbing. Also, they tend to violate the rule associated with storing and maintaining foods as their 10 most violated codes contain the one associated with 'Raw, cooked or prepared food is adulterated, contaminated, cross-contaminated, or not discarded in accordance with HACCP plan'
 
 
 ```{r}
 violation_code_with_restype("Italian")
+
 ```
 
 Next, we decide to explore the violation types the Italian restaurants have made. Comparing all three plots, it seems that the restaurants of different types tend to make similar violations. The 10 most common violation types for Italian restaurants are exactly same as the American restaurants except that the orders of violation codes (in terms of frequency) changes. The Italian restaurants in New York area seem to violate the rule associated with installing and maintaining plumbing properly more than the American restaurants in New York. Moreover, compared to the overall frequency of violation codes, these two types of restaurants seem to have more issue with mice.
@@ -194,16 +215,18 @@ The 10 most common violation types for Chinese restaurants seem to be slightly d
 
 
 ```{r}
-violation_code_with_restype("Dessert")
+violation_code_with_restype("Cafe")
+
 ```
 
 ```{r}
 violation_code_with_restype("Latin (Cuban, Dominican, Puerto Rican, South & Central American)")
+
 ```
 
-The bar chart of the violation codes for Latin and Dessert restaurants look almost the same as other three types of restaurants. The violation associated with the evidence of mice or live mice present in facility's food and/or non-food areas have frequently made in both types of restaurants compared to other violations. Moreover, Latin restaurants have the issue of roaches as well. The Dessert type restaurants tend to violate the code associated with sanitizing utensils and washing food contact surface more often. Though, compared to the overall (containing all the restaurants) frequency of the violation codes, the code associated with the mice one is ranked lower for these types of restaurants.
+The bar chart of the violation codes for Latin restaurants looks almost the same as other three types of restaurants. The violation associated with the evidence of mice or live mice present in facility's food and/or non-food areas have frequently made. For cafes, the regulation associated with living mice is less freuquently violated compared to other restaurant types. Latin restaurants have the issue of roaches as well. The Cafes tend to violate the code associated with sanitizing utensils and washing food contact surface more often. Though, compared to the overall (containing all the restaurants) frequency of the violation codes, the code associated with the mice one is ranked lower for these types of restaurants.
 
-Also, we decide to study the association between the violation codes and the years. In other words, we decide to explore more to see if there are any trends in the types of violations across the years. We still focus on the 5 most common restaurants to keep it simple and more interpretable. In order to produce a plot for each year, we take the same steps as described above except that we create new columns called year and month which extract year and month information from inspection date using mutate function.
+Also, we decide to study the association between the violation codes and the years. We still focus on the 5 most common restaurants to keep it simple and more interpretable. In order to produce a plot for each year, we take the same steps as described above except that we create new columns called year and month which extract year and month information from inspection date using mutate function.
 
 Additional note: we decide to focus on 08A, 06D, 04L, and 06C only. While including all the violation codes provide more information about what overall violation trends across the year, this can make the graph more complicated and hard to look at. So, to make it simple and more readable, we choose 08A, 06D, 04L, and 06C as our x variable to see if there are any trends in these violation types. Again, because we are most interested in the shape of the distribution for each type of restaurant and each year, we set the scale to free to prevent some of the graphs from shrinking towards 0.
 
@@ -219,4 +242,59 @@ ggplot(top5_year, aes(x = violation_code, y = count, fill = year)) +
   theme_grey(16)
 ```
 
-One noticeable feature from this graph is that there are not much data in 2013. In fact, it is also shown in the dataframe that the frequency of any violation types for 2013 is less than 10. The frequency of 08A is highest in the year of 2017 for American, Dessert, Chinese, and Italian. Only the plot of Latin restaurants has the highest frequency of 08A in the year of 2015. There is increasing pattern in any violation code for Chinese and Dessert restaurants. All of the violation code reached its peak in the year of 2017. It then decreases significantly at 2018, but it would probably be because the inspections for 2018 has not finished yet (since it is just April). While there is an increasing pattern in 04L, 06D, and 08A for Italian and American restaurants, it seems like the frequency of the violations of 06C (Food not protected from potential source of contamination during storage, preparation, transportation, display or service) has decreased after 2016. For Latin restaurants, the frequency of all four type of violations increase at 2015 and then decrease after 2016. Also, the Latin restaurants are the only one which has a decreasing trend in 04L that is associated with mice. 
+One noticeable feature from this graph is that there are not much data in 2013. In fact, it is also shown in the dataframe that the frequency of any violation types for 2013 is less than 10. The frequency of 08A is highest in the year of 2017 for American, Cafe, Chinese, and Italian. Only the plot of Latin restaurants has the highest frequency of 08A in 2015. There is increasing pattern in any violation code for Chinese restaurants and Cafe. All of the violation codes reach a peak in 2017. It then decreases significantly in 2018, but it would probably be because the inspections has not finished yet for 2018. While there is an increasing pattern in 04L, 06D, and 08A for Italian and American restaurants, it seems like the frequency of the violations of 06C (Food not protected from potential source of contamination during storage, preparation, transportation, display or service) has decreased after 2016. For Latin restaurants, the frequency of all four type of violations increase at 2015 and then decrease after 2016. Also, the Latin restaurants are the only one which has a decreasing trend in 04L that is associated with mice. 
+
+
+```{r}
+library(plotly)
+
+
+violation_code_restype <- function(df, x){
+  new_df <- df %>% filter(cuisine == x) %>% select(violation_code) %>% group_by(violation_code) %>%
+    summarize(count = n()) %>% arrange(-count) %>% top_n(10)
+  
+  return(new_df)
+  
+}
+
+american <- df %>% violation_code_restype("American") %>% arrange(count)
+italian <- df %>% violation_code_restype("Italian") %>% arrange(count)
+chinese <- df %>% violation_code_restype("Chinese") %>% arrange(count)
+cafe <- df %>% violation_code_restype("Cafe") %>% arrange(count)
+latin <- df %>% violation_code_restype("Latin (Cuban, Dominican, Puerto Rican, South & Central American)") %>% arrange(count)
+
+p <- plot_ly(type = 'bar', orientation = 'h') %>%
+  add_trace(x = italian$count, y = italian$violation_code, name = 'italian', visible = F) %>%
+  add_trace(x = chinese$count, y = chinese$violation_code, name = 'chinese', visible = F) %>%
+  add_trace(x = cafe$count, y = cafe$violation_code, name = 'Cafe', visible = F) %>%
+  add_trace(x = latin$count, y = latin$violation_code, name = 'latin', visible = F) %>%
+  add_trace(x = american$count, y = american$violation_code, name = 'american',  visible = T) %>% 
+  layout(
+    xaxis = list(title=""),
+    yaxis = list(title=""),
+    showlegend = FALSE,
+    updatemenus = list(
+      list(
+        buttons = list(
+          list(method = 'restyle',
+               args = list("visible", list(T,F,F,F,F)),
+               label = 'American'),
+          list(method = 'restyle',
+               args = list("visible", list(F,T,F,F,F)),
+               label = 'Italian'),
+          list(method = 'restyle',
+               args = list("visible", list(F,F,T,F,F)),
+               label = 'Chinese'),
+          list(method = 'restyle',
+               args = list("visible", list(F,F,F,T,F)),
+               label = 'Cafe'),
+          list(method = 'restyle',
+               args = list("visible", list(F,F,F,F,T)),
+               label = 'Latin')
+        )
+      )
+    )
+  )
+
+p
+```

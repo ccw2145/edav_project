@@ -10,16 +10,18 @@ knitr::opts_chunk$set(echo = TRUE)
 ## R Markdown
 
 
-```{r load data}
+```{r load data, include = FALSE}
 library(vcd)
 library(tidyverse)
+library(plotly)
 
-setwd('/Users/lisakim/Desktop/EDAV Final/')
-data <- read.csv("Restaurants.csv", header = T, sep=',', na.strings=c("NA","N/A",""), colClasses = "character")
-names(data)
+load('~/EDAV/data/data.RData')
+#setwd('/Users/lisakim/Desktop/EDAV Final/')
+#data <- read.csv("Restaurants.csv", header = T, sep=',', na.strings=c("NA","N/A",""), colClasses = "character")
+#names(data)
 ```
 
-```{r Data Cleaning}
+```{r Data Cleaning, echo = FALSE, eval= TRUE}
 keep_cols <- c('DBA', 'BORO', 'ZIPCODE','CUISINE.DESCRIPTION','INSPECTION.DATE','VIOLATION.CODE','SCORE', 'GRADE','INSPECTION.TYPE')
 df <- data%>% select(keep_cols)
 
@@ -44,7 +46,7 @@ violation <- unique(violation)
 
 ```
 
-```{r Generating grade column from scores}
+```{r Generating grade column from scores, echo = FALSE, eval= TRUE}
 convert_to_grade <- function(x){
   if (x < 14){
     return("A")
@@ -187,7 +189,6 @@ violation_code_with_restype <- function(x){
 
 ```{r}
 violation_code_with_restype("American")
-
 ```
 
 We first focus on the violation types that American restaurants made. In order to produce a bar chart of 10 most common violation made by these restaurants, the steps we take are following: 
@@ -208,7 +209,6 @@ Next, we decide to explore the violation types the Italian restaurants have made
 
 ```{r}
 violation_code_with_restype("Chinese")
-
 ```
 
 The 10 most common violation types for Chinese restaurants seem to be slightly different from those of the previous two restaurant types. The violation of 04L (Evidence of mice or live mice present in facility's food and/or non-food areas) is more frequent (in terms of relative frequency). Moreover, the 04M code is violated more than 1000 times and is ranked at top 9. This one is associated with live roaches present in facility's food and/or non-food areas. So far, our results on the different types of restaurants show us that it would probably be a great idea to look at this report first to avoid the restaurants with roaches and mice.
@@ -216,12 +216,10 @@ The 10 most common violation types for Chinese restaurants seem to be slightly d
 
 ```{r}
 violation_code_with_restype("Cafe")
-
 ```
 
 ```{r}
 violation_code_with_restype("Latin (Cuban, Dominican, Puerto Rican, South & Central American)")
-
 ```
 
 The bar chart of the violation codes for Latin restaurants looks almost the same as other three types of restaurants. The violation associated with the evidence of mice or live mice present in facility's food and/or non-food areas have frequently made. For cafes, the regulation associated with living mice is less freuquently violated compared to other restaurant types. Latin restaurants have the issue of roaches as well. The Cafes tend to violate the code associated with sanitizing utensils and washing food contact surface more often. Though, compared to the overall (containing all the restaurants) frequency of the violation codes, the code associated with the mice one is ranked lower for these types of restaurants.
@@ -246,9 +244,6 @@ One noticeable feature from this graph is that there are not much data in 2013. 
 
 
 ```{r}
-library(plotly)
-
-
 violation_code_restype <- function(df, x){
   new_df <- df %>% filter(cuisine == x) %>% select(violation_code) %>% group_by(violation_code) %>%
     summarize(count = n()) %>% arrange(-count) %>% top_n(10)

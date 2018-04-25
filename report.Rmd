@@ -39,7 +39,6 @@ Selina- restaurants case by case
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 ### Packages and Libraries
 library(knitr)
-#<<packages_and_libraries>>
 library(dplyr)
 library(tidyverse)
 library(skimr)
@@ -48,7 +47,6 @@ library(lubridate)
 library(xts)
 library(plotly)
 library(tidyr)
-#source('~/EDAV/project_starter.Rmd')
 ```
 
 
@@ -215,7 +213,7 @@ aggregate(. ~yearmon(date),ts ,mean)
 In the following sections, we will dive deeper into different violations, scores, and some of our most frequented restaurants.
 
 ### Violations 
-```{r,child="violation_code_count_ver2.Rmd"}
+```{r,child="violation_code_count.Rmd"}
 ```
 
 ### Restaurants by case

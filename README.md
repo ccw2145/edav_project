@@ -1,7 +1,7 @@
 # EDAV Final Project
 ### Instructions
 GENERAL INFORMATION
-
+https://docs.google.com/document/d/1du66S3H41BgP7XC4UlQavVAuxqh3DYEllj93cYQiXCY/edit
 GOAL
 
 The goal of this project is to perform an exploratory data analysis / create visualizations with data of your choosing, in order to gain preliminary insights on questions of interest to you.

@@ -7,7 +7,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-* Missing Grades *
+### Missing Grades
 
 ```{r, echo=FALSE, include =FALSE}
 # pre-processing
@@ -131,7 +131,7 @@ colnames(df6) <- c("grade","Freq","imputation","inspection")
 #summarise(re_insp_df,sum(Freq))
 ```
 
-```{r, fig.width = 10,fig.height = 10}
+```{r, fig.width = 6,fig.height = 6}
 df7 <- rbind(df1,df2,df3,df4,df5,df6)
 df7 <- droplevels(df7)
 df7$imputation <- as.factor(df7$imputation)
@@ -142,9 +142,9 @@ vcd::mosaic(grade ~inspection+imputation,df7,main="Grade Distribution vs Inspect
 Note that when fixing inspection=re, there is slight difference before and after imputation when there shouldn't be because, according to the manual, it's possible that a record of the grade is simply missing in the data even if the grade was issued. And as we'd expect, without imputation (filling in missing grades), the initial inspections only have A grades. Fixing inspection=initial, we see a big difference when we impute the data -- there are about 40% of restaurants that actually did not receive an A during their first inspection. As the way the data was given to us ("both"+"none" categories), if we simply ignore the missing values, we'd assume that a high percentage of restaurants in NYC have an A. However, as shown in the graph, this is not true if we take into account the initial inspection grades (ie "yes" category). So this tells us that we shouldn't just trust that almost all restaurants in NYC have been always clean and healthy. But also, we can see that the enforcement of inspections can be effective in encouraging the restaurants to improve their cleanliness and health levels.
 
 
-** Grades vs Restaurant Types **
+### Grades vs Restaurant Types
 
-We now shift our focus to examining if certain types of restaurants are cleaner and healthier than ther others. Since New York City requires restaurant to post their grades and the customers are often more familiar with this grading system, we decided to look at grades instead of scores. Above are tables showing top 20 restaurant types with the highest percentage of receiving an A (count of A's/total counts of A+B+C within its own category) and a C. And for this study, we decided to use grades from both initial insepctions and re-inspections excluding missing grades since these are the actual grades the restaurants will post.
+We now shift our focus to examining if certain types of restaurants are cleaner and healthier than ther others. Since New York City requires restaurant to post their grades and the customers are often more familiar with this grading system, we decided to look at grades instead of scores. Below are tables showing top 20 restaurant types with the highest percentage of receiving an A (count of A's/total counts of A+B+C within its own category) and a C. And for this study, we decided to use grades from both initial insepctions and re-inspections excluding missing grades since these are the actual grades the restaurants will post.
 
 ```{r}
 df_cuisine <- df[,c('name','cuisine','grade')]
@@ -211,5 +211,5 @@ ggplot(tidyv_cuisine_top_C, aes(x=cuisine,y=Percentage,fill=GradeType,order_by()
 
 The first plot is the grade percentages for the top 20 types of restaurants with the highest total grade counts. The second plot is the grade percentages for the top 20 restaurant types that received the highest percentages of A. And the third plot is the grade percentages for the top 20 restaurant types that received the highest percentages of C.
 
-We can see that among the restaurant types with the top total counts, Cafe, Hamburgers and Donuts are the top 3 in receiving A's even though none of the made to the top 20 list of receiving A's among all restaurant types. We can also see that there are several that have 100% A's, including Cajun, Czech, Fruits/Vegetables, Not Listed/Not Applicable, Nuts/Confectionary, Scandinavian and Soups. However, if we look closer on the tables above, these types of restaurants actually have a very small sample size (<=30). Therefore, it's possible that them having very few samples made it less likely to have that one bad sample in order to achieve 100% A's. Among the top 20 C list, we see that Polynesian, Iranian, and Bangladeshi made the top 3. However, if we look at the table again, we see that both Polynesian and Iranian have a sample less than 10. So again, this tells us that they may not be representative. And in general, the top A list consists of European food while the top C list is a mixture of Latin, Asian, African, Caribbean, Australian, and Spanish restaurants.
+We can see that among the restaurant types with the top total counts, Cafe, Hamburgers and Donuts are the top 3 in receiving A's and all of them also made the top 20 list of receiving A's among all restaurant types. We can also see that there are several that have 100% A's, including Cajun, Czech, Fruits/Vegetables, Not Listed/Not Applicable, Nuts/Confectionary, Scandinavian and Soups. However, if we look closer on the tables above, these types of restaurants actually have a very small sample size (<=30). Therefore, it's possible that them having very few samples made it less likely to have that one bad sample in order to achieve 100% A's. Among the top 20 C list, we see that Polynesian, Iranian, and Bangladeshi made the top 3. However, if we look at the table again, we see that both Polynesian and Iranian have a sample less than 10. So again, this tells us that they may not be representative. And in general, the top A list consists of European food while the top C list is a mixture of Latin, Asian, African, Caribbean, Australian, and Spanish restaurants.
 

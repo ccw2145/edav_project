@@ -284,8 +284,8 @@ STARBUCKS$Boro<-reorder(STARBUCKS$BORO,STARBUCKS$Score)
 g<-ggplot(STARBUCKS) +
   geom_bar(aes(Boro, Score),stat = 'identity',fill="tan2")  +
   facet_grid(~year)+
-  labs(title="Mean Violation Code 08A By BORO ",x = "NYC Borough", y = "08A Violation Score")+
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+  labs(title="Mean Violation Code 08A By BORO ",x = "", y = "08A Violation Score")+
+  theme(axis.text.x = element_text(angle = 40, vjust = 1, hjust=1))
 g <- ggplotly(g,tooltip=c("x", "y"))
 g
 

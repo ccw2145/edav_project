@@ -46,11 +46,10 @@ inspecttbl$SCORE <- as.numeric(inspecttbl$SCORE)
 # n_distinct(inspecttbl$CAMIS)
 # Data Cleaning -- remove inspection 1900 
 inspecttbl<-filter(inspecttbl, `INSPECTION.DATE` != "1900-01-01")
-# range(inspecttbl$`INSPECTION.DATE`)
 
 ```
 
-```{r Serious Violation Resterant}
+```{r Serious Violation Resterant,fig.show='hold',warning=FALSE, message=FALSE}
 # Top 10 Resteraurants Ranked by Number of Critical Violation
 # Regardless of type of violation
 
@@ -75,16 +74,13 @@ result$RESTAURANT<-reorder(result$RESTAURANT,result$violation_count)
 g<-ggplot(result, aes(RESTAURANT, violation_count)) +
   geom_bar(stat = 'identity',fill="tan2")  +
   coord_flip()+
-  #xlabel,ylabel 
   labs(title="10 Worst Resteraurants Ranked by Number of \n Critical Violation ",x = "", y = "Critical Violation Count")
 g
-#ggplotly(g,tooltip=c("x", "y"))
-
 ```
 We want to evaluate the restaurants in NYC inspection and find the worst restaurants in NYC. We define two ways to evaluate how bad the restaurant is, by violation incidents and by score of those violation. For the first method, we count the number of violation incident with grade C under critical condition [CRITICAL.FLAG=='Critical'] for each restaurant. Across all records, we plot the 10 restaurants with highest violation count. Overall, there are 5 restaurants have critical violation counts more than 40. Note that the first one 'Gang San Deul' receives over 45 violation that is marked critical. We can see that some of them are Asian Cuisine from the restaurant names.
 
 
-```{r Highest Violation Score Restaurant}
+```{r Highest Violation Score Restaurant,fig.show='hold',warning=FALSE, message=FALSE}
 # restaurant have the highest violation score
 # Define bad restaurants as violation  Score > 27 [Grade C] ~ 5 occurance of Grade C
 citical_count_score<-citical_count%>%
@@ -96,24 +92,17 @@ result$RESTAURANT<-reorder(result$RESTAURANT,result$SCORE)
 g<-ggplot(result, aes(RESTAURANT, SCORE)) +
   geom_bar(stat = 'identity',fill="tan2")  +
   coord_flip()+
-  #theme(text = element_text(size=10), axis.text.x = element_text(angle=45, vjust=1, color = "grey")) +
   labs(title="Worst 10 Highest Violation Score Restaurant ",x = "", y = "Score")
 
-#ggplotly(g)
 g
-# save the csv for google api
-# csv<-citical_count_score
-# write.csv(csv[1:15,c(1,4,2,3,10)], file = '/Users/Selina/Desktop/Visualization/EDAV-master/chart.csv',row.names = FALSE)
-
-
 ```
 
 For the second method, we want to give particular emphasis on the times of violation occurs for a restaurant during one inspection. We take into account of violations that have grade C [with score > 27] and have occurred more than 5 times for a restaurant. In the plot, we find that all of the restaurants have score above 100. In other words, these restaurants have at least 5 violation scored larger than 100 at the same date of inspection! Note that ’Margarita Island' have the highest violation score [151] among all the restaurants.
 
-Google chart is a nice API for visualization in javascript, base on the what we learned this semester on d3, we decide to explore this API a bit. Click [here][chart] to see the interactive google chart version of the plot.
+Google chart is a nice API for visualization in javascript, base on the what we learned this semester on d3, we decide to explore this API a bit. *Click [here][chart] to see the interactive google chart version of the plot.*
 
 
-```{r CAFE Mean Violation Score, fig.show='hold', out.width='80%', message=FALSE, warning=FALSE}
+```{r CAFE Mean Violation Score, fig.show='hold', message=FALSE, warning=FALSE}
 #### INSPECTION.TYPE Violation related####
 # we focus on instore sanity check of the inspection#
 # dis-regarding rows from initial inspections as grades and scores are not counted
@@ -121,7 +110,6 @@ gradables <- c("Cycle Inspection / Initial Inspection" , "Cycle Inspection / Re-
                "Pre-permit (Operational) / Initial Inspection", "Pre-permit (Operational) / Re-inspection")
 
 inspecttbl1 <- (filter(inspecttbl, `INSPECTION.TYPE` %in% gradables))
-
 
 # critical score and inspection type of chain restaurant
 # store per year average critical score variation
@@ -144,21 +132,15 @@ score_boro<-score%>%filter(BORO=="MANHATTAN"|BORO=="QUEENS"|BORO=="BROOKLYN")
 score_boro$DBA<-as.factor(score_boro$DBA)
 
 csv<-score_boro
-# change to local path
-# write.csv(csv, file = 'YOURPATH',row.names = FALSE)
-#write.csv(csv, file = '/Users/Selina/Desktop/Visualization/EDAV-master/boro_mean.csv',row.names = FALSE)
-# csv <- read_csv("YOURPATH")
-#csv <- read_csv("/Users/Selina/Desktop/Visualization/EDAV-master/boro_mean.csv")
 
 g<-ggplot(csv, aes(x = year, y = MEAN, fill = DBA)) + 
   geom_col(position = "dodge") +
   facet_grid(fct_relevel(score_boro$BORO,"MANHATTAN")~.) +
   ggtitle("Mean Violation Score") +
-  theme_grey(16)
+  scale_colour_colorblind()
 
-g+ scale_colour_colorblind()
-
-ggplotly(g,tooltip=c("x", "y"))
+#g<- ggplotly(g,tooltip=c("x", "y"))
+g
 ```
 
 We gather ‘Cafe’ category from all the restaurant types, and want to see the violation score difference among the cafes.
@@ -184,7 +166,6 @@ For Brooklyn and Queens,
 
 ```{r STARBUCKS Most Freq Violation, warning = FALSE, message= FALSE}
 # CAFE common violation type
-# edit
 STARBUCKS_type<-inspecttbl1[ grep("STARBUCKS",inspecttbl1$DBA),]%>%group_by(DBA,VIOLATION.CODE)%>%summarise(vio_freq=n()/2431)%>%arrange(desc(vio_freq))
 STARBUCKS_type$DBA<-"STARBUCKS"
 
@@ -206,8 +187,7 @@ g<-ggplot(type, aes(x = ViolationCode, y = frequency)) +
   geom_col(position = "dodge",fill="tan2") +
   facet_grid(~ fct_relevel(type$DBA,"STARBUCKS"),scales = 'free')+
   ggtitle("Most Frequent Violation Code for Cafes") +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
-  theme_grey(16)
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
 
 g<- ggplotly(g,tooltip=c("x", "y"))
 g
@@ -239,14 +219,7 @@ code<-rbind(STARBUCKS_type[1:5,], DUNKIN_type[1:5,],PICCOLO_type[1:5,],GREGORY_t
 code$DBA<-factor(code$DBA)
 code$DBA<-fct_relevel(code$DBA,"STARBUCKS")
 # code$DBA<-fct_relevel(code$DBA,"PICCOLO", )
-mosaic(VIOLATION.CODE ~ DBA, code, direction = c("v", "h"),labeling= labeling_border(rot_labels = c(15,0,0,0)),main="Violation Code Ratio of Cafes") #gp = gpar(fill = c("blue", "lightblue"),rot_labels=c(0,90,0,0),just_labels="right" )
-
-
-#, labeling= labeling_border(rot_labels = c(0,90,0,0), 
-                                  # just_labels = c("center", 
-                                      #           "center", 
-                                       #          "center", 
-                                       #           "right"))
+mosaic(VIOLATION.CODE ~ DBA, code, direction = c("v", "h"),labeling= labeling_border(rot_labels = c(15,0,0,0)),main="Violation Code Ratio of Cafes")
 ```
 We find the 10F[non-food contact surface improperly constructed], 10B[improper sewage disposal system], 08A[Facility not vermin proof and have potential to attract vermin] are the most frequent violation code combination across these 4 stores.
 
@@ -254,14 +227,14 @@ A close look at their distribution by store would be interesting.
 From the plot, we can see that STARBUCKS and DUNKIN has very similar violation ratio distribution, whereas GREGORY have more violation in 10B , and less in 10F  and 08A. PICCOLO has a significant increase in 08A.
 
 
-```{r STARBUCKS, fig.show='hold', out.width='80%', message=FALSE, warning=FALSE}
+```{r STARBUCKS, message=FALSE, warning=FALSE}
 # per year/date
 yearmonth<-inspecttbl1%>%filter(CUISINE.DESCRIPTION=="CafÃ©/Coffee/Tea")%>%mutate(yearmonth = format(INSPECTION.DATE, "%Y-%m"))
 STARBUCKS<-yearmonth[grep("STARBUCKS",yearmonth$DBA),]%>%group_by(yearmonth)%>%filter(VIOLATION.CODE=="08A")%>%summarise(Score = mean(SCORE))
 STARBUCKS$Date<-as.Date(as.yearmon(STARBUCKS$yearmonth, "%Y-%m"))
 g<-ggplot(STARBUCKS) + geom_line(aes(Date, Score)) +
   geom_point(aes(Date, Score))+
-    ggtitle("STARBUCKS Violation Score 08A Monthly Mean Score Variation") +
+    ggtitle("STARBUCKS Violation 08A Monthly Mean Score Variation") +
     labs (x = "Month", y = "Score") +
     theme_grey(16) +
     theme(legend.title = element_blank())
@@ -288,7 +261,6 @@ g<-ggplot(STARBUCKS) +
   theme(axis.text.x = element_text(angle = 40, vjust = 1, hjust=1))
 g <- ggplotly(g,tooltip=c("x", "y"))
 g
-
 ```
 We are wondering if this violation score is different across different area of NYC as well. The Mean Violation Code By Boro shows the following trend. Since the data in 2014 and 2018 are not recorded full-year around. We take 2015, 2016, 2017 to analysis the overall trend.
 

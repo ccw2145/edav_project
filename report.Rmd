@@ -1,7 +1,7 @@
 ---
 title: "EDAV Final Project"
 subtitle: |
-  NYC Restaurant Inspection
+  NYC Restaurant Inspection Results Analysis
   
 author: "Cindy Wu, Selina Tang, Lisa Kim, Julie Yu"
 date: "`r format(Sys.time(), '%B %d %Y')`"
@@ -27,9 +27,9 @@ font-size: 12pt;
 
 NYC is a hub of diversity, yet there is one similarity that 8.5 million people shares – everyone eats. Over 26,000 eating establishments in the city (according to the NYC Department of Health and Mental Hygiene or DOHMH) thrives here because New Yorkers dine out over 58% of their lunches or dinners and spend $46.14 on average for each meal per person (Zagat Dining Trends Survey 2018). For these customers, ourselves included, the food that we purchase so frequently and at such high costs is a major factor influencing our health. To help people stay informed about food safety and the potential health risks that eating out poses, we conducted our research about restaurants in NYC based on DOHMH's source data hosted on Open Data.
 
-For better interactivity, we used plotly for most of our graphs and include a d3 visualization for missing data. 
+For better visualization, we used CVD-friendly color theme and plotly for most of our graphs. To increase interactivity, we also incorporated d3 and google charts for missing values and restaurants with worst violation scores. 
 
-$Team$ $Members:$ Cindy Wu, Julie Yu, Lisa Kim, Selina Tang
+*Team Members*: Cindy Wu, Julie Yu, Lisa Kim, Selina Tang
 
 Cindy- data description, data quality, time series overview  
 Julie- grade distributions and analysis  
@@ -47,6 +47,9 @@ library(lubridate)
 library(xts)
 library(plotly)
 library(tidyr)
+library(svglite)
+library(viridis)
+library(ggthemes)
 ```
 
 
@@ -115,7 +118,7 @@ skim(df_1) %>% filter(stat == "missing") %>%
 The third chart summarizes the final data we used for the report. Although there are still many missing values in grades, we do not consider it bad data quality since they are intentionally left blank.The overall quality of the dataset seems quite promising at this point. 
 
 ```{r,  fig_height=4, fig_width=6, eval = TRUE, echo = FALSE}
-# # missing data after removing all new restaurants and missing scores
+# missing data after removing all new restaurants and missing scores
 df <- filter(df_1,!is.na(SCORE))
 skim(df) %>% filter(stat == "missing") %>%
   arrange(desc(value)) %>% select(variable, type, value) %>% mutate(percent_missing = value *100 /nrow(df))
@@ -147,9 +150,11 @@ percent_missing1 <- df_1 %>% group_by(BORO) %>%
 
 p1<- ggplot(percent_missing1)+
   geom_line(aes(x= BORO, y =percent_Missing_Score, group=1))+
-  geom_point(aes(x= BORO, y =percent_Missing_Score),color = "hotpink")+
+  geom_point(aes(x= BORO, y =percent_Missing_Score))+
   ylim(0,0.15)+
-  ggtitle("Missing data percentage by borough")
+  ggtitle("Missing data percentage by borough")+
+  theme_grey(16)+
+  scale_colour_colorblind()
 p1 <- ggplotly(p1)
 p1
 # By inspection type
@@ -160,8 +165,10 @@ percent_missing <- df_1 %>% group_by(INSPECTION.TYPE) %>%
 
 p2 <- ggplot(percent_missing)+
   geom_line(aes(x= INSPECTION.TYPE, y =percent_Missing_Score, group=1))+
-  geom_point(aes(x= INSPECTION.TYPE, y =percent_Missing_Score),color = "blue")+
-  ggtitle("Missing data percentage by Inspection Type")
+  geom_point(aes(x= INSPECTION.TYPE, y =percent_Missing_Score))+
+  ggtitle("Missing data percentage by Inspection Type")+
+  theme_grey(16)+
+  scale_colour_colorblind()
 p2 <- ggplotly(p2)
 p2
 ```
@@ -179,13 +186,14 @@ quarterly <- apply.quarterly(ts, FUN =mean)
 ts_df<- data.frame(date=index(ts),score = ts)
 quarterly_df <- data.frame(date = index(quarterly), quarter_avg = quarterly)
 
-p<-plot_ly(quarterly_df[quarterly_df$date> "2013-05-16" & quarterly_df$date < "2018-03-31" ,])%>% 
-  add_lines( x=~date, y=~quarter_avg,
+p<-plot_ly(quarterly_df[quarterly_df$date> "2013-05-16" & quarterly_df$date < "2018-03-31" ,],
+        x=~date, y=~quarter_avg,
         type = 'scatter',
         mode = 'lines+markers',
         hoverinfo = 'text',
-        text = ~paste("Quarter Date:",date,"<br> Average Score: ",round(quarter_avg)))%>%
-  add_trace(x = ~date,y = ~quarter_avg, mode = 'markers',color=I("orange"),marker = list(size = 8))%>%
+        line = list(color = 'black'),
+        text = ~paste("Quarter Date:",date,"<br> Average Score: ",round(quarter_avg))) %>%
+  add_trace(x = ~date,y = ~quarter_avg, mode = 'markers',marker = list(size = 8), color = viridis_pal(option = "D")(1))%>%
         layout(title = "Quarter Average Score",showlegend = FALSE)
 p
 ```
@@ -222,9 +230,47 @@ In the following sections, we will dive deeper into different violations, scores
 
 ## Executive Summary
 
+In this report we explore the NYC restaurant inspection results from 2013 to March 2018 provided by NYC Department of Health and Mental Hygiene (NYC DOHMH). Each inspection result entry includes information about the restaurant, a letter grade, a score, and violation details for that specific inspection. We start out with a general overview of average scores over the years, and dig deeper into different types of restaurants and look at patterns in grade distributions. Since grades are evaluated based on violations, we also look at different types of violations to find the worst/most common types of violations in our data. We then focus on specific restaurants/chains including the most popular ones and ones with the worst scores and violations to avoid.
+
+By plotting the quarter average score, we see that the grades fluctuate but the third quarter (July to September) always has the highest (worse) aggregated mean score of the year. 
+
+```{r, echo= FALSE,eval = TRUE, fig.show='hold', out.width='70%', message=FALSE, warning=FALSE}
+p<-plot_ly(quarterly_df[quarterly_df$date> "2013-05-16" & quarterly_df$date < "2018-03-31" ,],
+        x=~date, y=~quarter_avg,
+        type = 'scatter',
+        mode = 'lines+markers',
+        hoverinfo = 'text',
+        line = list(color = 'black'),
+        text = ~paste("Quarter Date:",date,"<br> Average Score: ",round(quarter_avg))) %>%
+  add_trace(x = ~date,y = ~quarter_avg, mode = 'markers',marker = list(size = 8), color = viridis_pal(option = "D")(1))%>%
+        layout(title = "Quarter Average Score",showlegend = FALSE)
+p
+```
+
+Intuitively, it seems like the during the summer months, restaurants tend to have more violations. But before we jump into any conclusions about NYC restaurant cleanliness, we examine the details of grades and violations. 
+
+As customers of the restaurants in NYC, perhaps the most direct way to check if a restaurant is clean or not is by looking at the grade posts given by NYC DOHMH. Therefore, we include the study of grades versus restaurant types. The graph below shows the top 20 common types of restaurants in a descending order from top to bottom by the percentage of receiving an A among all restaurants of their own type. We see that the top 3 A percentages belong to Cafe/Coffee/Tea, Hamburgers, and Donuts. In addition, among the 20 common types of restaurants, European and American tend to have a higher A percentage while Asian and Latin tend to have a lower A percentage.
+
+![*Grade Disritribution*](images/Julie_plot.png)
+
+We also take a look at the overall distribution of violation codes to see what types of the regulations are frequently violated by the NYC restaurants. The following bar chart describes the frequency of each violation made by the NYC restaurants. Many of the regulations that are frequently violated by the restaurants are associated with the storage of foods. In fact, the violations associated with not holding cold food and hot food items at the appropriate temperature are ranked at top 6 and 8 respectively. Also, the restaurants are penalized for not storing and handling raw, cooked, or prepared foods appropriately. 
+
+![*Violation Disritribution*](images/Lisa_plot.png) 
+
+In addition, restaurants seem to make very frequently violations associated with the cleanliness of the restaurants. They are penalized for not well maintaining the non-food contact surface the most frequently. Also, the most surprising finding from this bar chart is that many of the restaurants have the problem with mice. In fact, the violation code related to living mice is ranked at 3, and is recorded 26794 times. Moreover, many of the restaurants seem to have the filth flies problem as well.
+
+Lastly, we examine four specific cafe chains in NYC to see the cleanness of popular cafe such as Starbucks through its annual violation score variation. The plot below shows annual violation score versus for four chains Starbucks, Dunkin, Gregory, and Piccolo in each NYC boroughs.
+
+![*Cafe mean violations scores*](images/selina_plot.png) 
+
+Most of the chain stores are located in Manhattan. In 2018, the violation score of the three cafes Starbucks, Dunkin, Gregory receives only about 10 in mean violation score, relatively low throughout these 5 years interval.  expect Piccolo.For the recent three years, Piccolo, an Italian cafe located in Manhattan received the highest score and performed the worst compared to rest. Besides, comparing Starbucks and Dunkin in Brooklyn, Dunkin’ Donuts has a higher violation score. 
+
 
 ## Conclusion
-This report explores NYC restaurant inspection results specifically focusing on grades and violations. The overall scores reamin similar in trends over the years and summer months tend to raise more violations. By visualizing grade distrubutions, we find the general pattern that European and American restaurants have better grades than Asian restaurants.From violation distributions, we learn that many restaurants are penalized for not storing food properly and not maintaning the space clean. 
+
+This report explores NYC restaurant inspection results specifically focusing on grades and violations. The overall scores reamin similar in trends over the years and summer months tend to raise more violations. By visualizing grade distrubutions, we find the general pattern that European and American restaurants have better grades than Asian restaurants.From violation distributions, we learn that many restaurants are penalized for not storing food properly and not maintaning the space clean. Looking at specific chains, we find that they might not follow the food safety rules exactly. Nevertheless in popular cafe such as Starbucks, we observe the attempt for improvement, a decreasing trend in the frequent violation across years.
+
+All in all, this report should help give readers a better understanding of the grades we see at restaurants and some insights on different types of violations to look out for. It is important to be aware of the potential health risks when going to restarants since they might not be as clean as we think. As enjoyable as restaurant dining experiences could be, it never hurts to be a bit more cautious. On a positive note, we are hopeful that restaurants/cafes are working towards improving food safty and providng more wholesome dining environment. 
 
 
 [data]: https://data.cityofnewyork.us/Health/DOHMH-New-York-City-Restaurant-Inspection-Results/xx67-kt59?category=Health&view_name=DOHMH-New-York-City-Restaurant-Inspection-Results

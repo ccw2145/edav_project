@@ -221,6 +221,7 @@ code$DBA<-fct_relevel(code$DBA,"STARBUCKS")
 # code$DBA<-fct_relevel(code$DBA,"PICCOLO", )
 mosaic(VIOLATION.CODE ~ DBA, code, direction = c("v", "h"),labeling= labeling_border(rot_labels = c(15,0,0,0)),main="Violation Code Ratio of Cafes")
 ```
+
 We find the 10F[non-food contact surface improperly constructed], 10B[improper sewage disposal system], 08A[Facility not vermin proof and have potential to attract vermin] are the most frequent violation code combination across these 4 stores.
 
 A close look at their distribution by store would be interesting.
